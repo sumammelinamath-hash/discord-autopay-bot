@@ -49,8 +49,6 @@ const commands = [
     .setName("stockcount")
     .setDescription("📦 View remaining stock")
 ].map(cmd => cmd.toJSON());
-  ]);
-});
 
 /* ================= INTERACTIONS ================= */
 client.on("interactionCreate", async interaction => {
