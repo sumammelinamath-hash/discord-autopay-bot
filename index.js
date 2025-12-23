@@ -115,6 +115,40 @@ client.on("interactionCreate", async interaction => {
     }
   }
 
+  /* ---------- /stockcount COMMAND ---------- */
+  if (interaction.commandName === "stockcount") {
+
+  const stocks = await Stock.find({ used: false });
+
+  if (stocks.length === 0) {
+    return interaction.reply({
+      content: "❌ No stock available.",
+      ephemeral: true
+    });
+  }
+
+  // Count per product
+  const counts = {};
+  for (const item of stocks) {
+    counts[item.product] = (counts[item.product] || 0) + 1;
+  }
+
+  let description = "";
+  for (const product in counts) {
+    description += `**${product}**: ${counts[product]} remaining\n`;
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle("📦 Stock Status")
+    .setColor(0x00ff99)
+    .setDescription(description)
+    .setFooter({ text: "Auto Delivery System" })
+    .setTimestamp();
+
+  await interaction.reply({ embeds: [embed] });
+  }
+}
+          
   /* ---------- /addstock COMMAND ---------- */
   if (interaction.isChatInputCommand() && interaction.commandName === "addstock") {
 
