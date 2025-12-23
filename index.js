@@ -44,6 +44,11 @@ client.once("ready", async () => {
     new SlashCommandBuilder()
   .setName("stockcount")
   .setDescription("📦 View remaining stock count")
+  .addStringOption(option =>
+        option
+          .setName("product")
+          .setDescription("minecraft / crunchyroll")
+          .setRequired(true)
       ),
     
     new SlashCommandBuilder()
