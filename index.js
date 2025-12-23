@@ -13,6 +13,7 @@ const config = require("./config");
 const Stock = require("./models/Stock");
 const Orders = require("./models/Orders");
 
+/* ================= CLIENT ================= */
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -31,8 +32,10 @@ client.once("ready", async () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
 
   await client.application.commands.set([
+
+    // 🔄 RENAMED COMMAND
     new SlashCommandBuilder()
-      .setName("buy")
+      .setName("request")
       .setDescription("Request a product")
       .addStringOption(option =>
         option
@@ -55,14 +58,19 @@ client.once("ready", async () => {
           .setName("data")
           .setDescription("Gift code or account")
           .setRequired(true)
-      )
+      ),
+
+    // 🆕 STOCK COUNT
+    new SlashCommandBuilder()
+      .setName("stockcount")
+      .setDescription("View available stock count")
   ]);
 });
 
 /* ================= INTERACTIONS ================= */
 client.on("interactionCreate", async interaction => {
 
-  /* ---------- /request COMMAND ---------- */
+  /* ---------- /request ---------- */
   if (interaction.isChatInputCommand() && interaction.commandName === "request") {
 
     await interaction.deferReply({ ephemeral: true });
@@ -82,9 +90,9 @@ client.on("interactionCreate", async interaction => {
         .setTitle("🛒 New Order Request")
         .setColor(0x00ff99)
         .addFields(
-          { name: "User", value: `<@${interaction.user.id}>` },
-          { name: "Product", value: product },
-          { name: "Order ID", value: orderId }
+          { name: "👤 User", value: `<@${interaction.user.id}>` },
+          { name: "📦 Product", value: product },
+          { name: "🆔 Order ID", value: orderId }
         )
         .setTimestamp();
 
@@ -93,7 +101,6 @@ client.on("interactionCreate", async interaction => {
           .setCustomId(`approve_${orderId}`)
           .setLabel("Approve")
           .setStyle(ButtonStyle.Success),
-
         new ButtonBuilder()
           .setCustomId(`reject_${orderId}`)
           .setLabel("Reject")
@@ -106,7 +113,7 @@ client.on("interactionCreate", async interaction => {
       }
 
       await interaction.editReply(
-        `✅ Order created!\n**Order ID:** ${orderId}\nWaiting for admin approval.`
+        `✅ Order created!\n🆔 **Order ID:** \`${orderId}\`\n⏳ Waiting for admin approval.`
       );
 
     } catch (err) {
@@ -115,41 +122,7 @@ client.on("interactionCreate", async interaction => {
     }
   }
 
-  /* ---------- /stockcount COMMAND ---------- */
-  if (interaction.commandName === "stockcount") {
-
-  const stocks = await Stock.find({ used: false });
-
-  if (stocks.length === 0) {
-    return interaction.reply({
-      content: "❌ No stock available.",
-      ephemeral: true
-    });
-  }
-
-  // Count per product
-  const counts = {};
-  for (const item of stocks) {
-    counts[item.product] = (counts[item.product] || 0) + 1;
-  }
-
-  let description = "";
-  for (const product in counts) {
-    description += `**${product}**: ${counts[product]} remaining\n`;
-  }
-
-  const embed = new EmbedBuilder()
-    .setTitle("📦 Stock Status")
-    .setColor(0x00ff99)
-    .setDescription(description)
-    .setFooter({ text: "Auto Delivery System" })
-    .setTimestamp();
-
-  await interaction.reply({ embeds: [embed] });
-  }
-}
-          
-  /* ---------- /addstock COMMAND ---------- */
+  /* ---------- /addstock ---------- */
   if (interaction.isChatInputCommand() && interaction.commandName === "addstock") {
 
     await interaction.deferReply({ ephemeral: true });
@@ -176,24 +149,53 @@ client.on("interactionCreate", async interaction => {
     }
   }
 
+  /* ---------- /stockcount ---------- */
+  if (interaction.isChatInputCommand() && interaction.commandName === "stockcount") {
+
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+      const stocks = await Stock.find({ used: false });
+
+      if (!stocks.length) {
+        return interaction.editReply("❌ No stock available.");
+      }
+
+      const map = {};
+      stocks.forEach(s => {
+        map[s.product] = (map[s.product] || 0) + 1;
+      });
+
+      let desc = "";
+      for (const p in map) {
+        desc += `📦 **${p}** → ${map[p]}\n`;
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle("📊 Stock Count")
+        .setColor(0x0099ff)
+        .setDescription(desc);
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (err) {
+      console.log(err);
+      await interaction.editReply("❌ Failed to fetch stock.");
+    }
+  }
+
   /* ---------- BUTTON HANDLER ---------- */
   if (interaction.isButton()) {
 
     if (!interaction.member.roles.cache.has(config.adminRoleID)) {
-      return interaction.reply({
-        content: "❌ Admin only.",
-        ephemeral: true
-      });
+      return interaction.reply({ content: "❌ Admin only.", ephemeral: true });
     }
 
     const [action, orderId] = interaction.customId.split("_");
     const order = await Orders.findOne({ orderId });
 
     if (!order || order.status !== "pending") {
-      return interaction.reply({
-        content: "❌ Order already processed.",
-        ephemeral: true
-      });
+      return interaction.reply({ content: "❌ Order already processed.", ephemeral: true });
     }
 
     /* ----- REJECT ----- */
@@ -204,25 +206,15 @@ client.on("interactionCreate", async interaction => {
       const user = await client.users.fetch(order.userId);
       user.send(`❌ Your **${order.product}** order was rejected.`).catch(() => {});
 
-      return interaction.update({
-        content: "❌ Order rejected",
-        embeds: [],
-        components: []
-      });
+      return interaction.update({ content: "❌ Order rejected", embeds: [], components: [] });
     }
 
     /* ----- APPROVE ----- */
     if (action === "approve") {
-      const stock = await Stock.findOne({
-        product: order.product,
-        used: false
-      });
 
+      const stock = await Stock.findOne({ product: order.product, used: false });
       if (!stock) {
-        return interaction.reply({
-          content: "❌ No stock available.",
-          ephemeral: true
-        });
+        return interaction.reply({ content: "❌ No stock available.", ephemeral: true });
       }
 
       stock.used = true;
@@ -232,22 +224,20 @@ client.on("interactionCreate", async interaction => {
       await order.save();
 
       const user = await client.users.fetch(order.userId);
-      const deliveryEmbed = new EmbedBuilder()
-  .setTitle("🎁 Product Delivered Successfully")
-  .setColor(0x00ff99)
-  .addFields(
-    { name: "📦 Product", value: order.product, inline: true },
-    { name: "🆔 Order ID", value: order.orderId, inline: true },
-    { name: "🔑 Your Code / Account", value: `\`\`\`${stock.data}\`\`\`` },
-    {
-      name: "⚠️ Important",
-      value: "Do NOT share this with anyone. This is for **one-time use only**."
-    }
-  )
-  .setFooter({ text: "Need help? Contact server admin." })
-  .setTimestamp();
 
-await user.send({ embeds: [deliveryEmbed] });
+      // ⭐ BETTER DELIVERY DM
+      const dmEmbed = new EmbedBuilder()
+        .setTitle("🎁 Order Delivered")
+        .setColor(0x00ff99)
+        .addFields(
+          { name: "📦 Product", value: order.product },
+          { name: "🆔 Order ID", value: order.orderId },
+          { name: "🔐 Your Item", value: `\`\`\`${stock.data}\`\`\`` }
+        )
+        .setFooter({ text: "Thank you for your purchase ❤️" })
+        .setTimestamp();
+
+      await user.send({ embeds: [dmEmbed] }).catch(() => {});
 
       const logChannel = client.channels.cache.get(config.logChannelID);
       if (logChannel) {
