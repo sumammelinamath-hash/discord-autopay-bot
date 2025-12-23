@@ -49,6 +49,7 @@ client.once("ready", async () => {
           .setName("product")
           .setDescription("minecraft / crunchyroll")
           .setRequired(true)
+   .map(command => command.toJSON());                
       ),
     
     new SlashCommandBuilder()
@@ -152,6 +153,39 @@ client.on("interactionCreate", async interaction => {
     }
   }
 
+  /* ---------- /stockcount COMMAND ---------- */
+  if (interaction.commandName === "stockcount") {
+
+  const stocks = await Stock.find({ used: false });
+
+  if (stocks.length === 0) {
+    return interaction.reply({
+      content: "❌ No stock available.",
+      ephemeral: true
+    });
+  }
+
+  const counts = {};
+
+  for (const stock of stocks) {
+    counts[stock.product] = (counts[stock.product] || 0) + 1;
+  }
+
+  let description = "";
+  for (const product in counts) {
+    description += `📦 **${product}** → ${counts[product]} remaining\n`;
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle("📊 Stock Count")
+    .setDescription(description)
+    .setColor(0x00ff99)
+    .setFooter({ text: "Auto Delivery System" })
+    .setTimestamp();
+
+  await interaction.reply({ embeds: [embed] });
+  }
+  
   /* ---------- BUTTON HANDLER ---------- */
   if (interaction.isButton()) {
 
