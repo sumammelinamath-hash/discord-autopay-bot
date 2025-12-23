@@ -32,7 +32,7 @@ client.once("ready", async () => {
 
   await client.application.commands.set([
     new SlashCommandBuilder()
-      .setName("buy")
+      .setName("request")
       .setDescription("Request a product")
       .addStringOption(option =>
         option
@@ -63,7 +63,7 @@ client.once("ready", async () => {
 client.on("interactionCreate", async interaction => {
 
   /* ---------- /buy COMMAND ---------- */
-  if (interaction.isChatInputCommand() && interaction.commandName === "buy") {
+  if (interaction.isChatInputCommand() && interaction.commandName === "request") {
 
     await interaction.deferReply({ ephemeral: true });
 
