@@ -199,7 +199,7 @@ client.on("interactionCreate", async interaction => {
 
       const user = await client.users.fetch(order.userId);
       const deliveryEmbed = new EmbedBuilder()
-  .setTitle("🎁 Product Delivered Successfully")
+  .setTitle("🎁 Pʀᴏᴅᴜᴄᴛ Dᴇʟɪᴠᴇʀᴇᴅ Sᴜᴄᴄᴇssғᴜʟʟʏ")
   .setColor(0x00ff99)
   .addFields(
     { name: "📦 Product", value: order.product, inline: true },
