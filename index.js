@@ -42,6 +42,12 @@ client.once("ready", async () => {
       ),
 
     new SlashCommandBuilder()
+    .setName("stockcount")
+    .setDescription("📦 View remaining stock count")
+]
+.map(command => command.toJSON());
+  
+    new SlashCommandBuilder()
       .setName("addstock")
       .setDescription("Add stock (Admin only)")
       .addStringOption(option =>
