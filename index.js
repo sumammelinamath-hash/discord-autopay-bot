@@ -76,8 +76,8 @@ const commands = [
     ),
 
   new SlashCommandBuilder()
-    .setName("buy")
-    .setDescription("Buy a product")
+    .setName("request")
+    .setDescription("Request a product")
     .addStringOption(o =>
       o.setName("product").setDescription("Product name").setRequired(true)
     ),
@@ -140,7 +140,7 @@ client.on("interactionCreate", async interaction => {
     }
 
     // /buy
-    if (interaction.commandName === "buy") {
+    if (interaction.commandName === "request") {
       const orderId = `ORD-${Date.now()}`;
 
       await Order.create({
