@@ -198,9 +198,32 @@ client.on("interactionCreate", async interaction => {
       await order.save();
 
       const user = await client.users.fetch(order.userId);
-      await user.send(
-        `🎁 **Your ${order.product} delivery:**\n\n${stock.data}`
-      ).catch(() => {});
+      const deliveryEmbed = new EmbedBuilder()
+  .setTitle("🎁 Product Delivered")
+  .setColor(0x00ff99)
+  .addFields(
+    { name: "📦 Product", value: order.product, inline: true },
+    { name: "🆔 Order ID", value: order.orderId, inline: true },
+    { name: "🔒 Your Code", value: "```••••••••••••```" },
+    {
+      name: "⚠️ Important",
+      value: "Click **Reveal Code** to view.\nDo NOT share this code."
+    }
+  )
+  .setFooter({ text: "Auto Delivery System" })
+  .setTimestamp();
+
+const revealButton = new ActionRowBuilder().addComponents(
+  new ButtonBuilder()
+    .setCustomId(`reveal_${order.orderId}`)
+    .setLabel("👁️ Reveal Code")
+    .setStyle(ButtonStyle.Primary)
+);
+
+await user.send({
+  embeds: [deliveryEmbed],
+  components: [revealButton]
+});
 
       const logChannel = client.channels.cache.get(config.logChannelID);
       if (logChannel) {
