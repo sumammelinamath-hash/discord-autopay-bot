@@ -20,19 +20,17 @@ const client = new Client({
   ]
 });
 
-/* -------------------- MONGODB CONNECT -------------------- */
+/* ================= MONGODB CONNECT ================= */
 mongoose
   .connect(config.mongoURI)
   .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.log(err));
+  .catch(err => console.log("❌ MongoDB Error:", err));
 
-/* -------------------- BOT READY -------------------- */
+/* ================= BOT READY ================= */
 client.once("ready", async () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
 
   await client.application.commands.set([
-
-    /* /buy */
     new SlashCommandBuilder()
       .setName("buy")
       .setDescription("Request a product")
@@ -43,10 +41,9 @@ client.once("ready", async () => {
           .setRequired(true)
       ),
 
-    /* /addstock (ADMIN) */
     new SlashCommandBuilder()
       .setName("addstock")
-      .setDescription("Add product stock (Admin only)")
+      .setDescription("Add stock (Admin only)")
       .addStringOption(option =>
         option
           .setName("product")
@@ -56,91 +53,101 @@ client.once("ready", async () => {
       .addStringOption(option =>
         option
           .setName("data")
-          .setDescription("Gift code OR email:password")
+          .setDescription("Gift code or account")
           .setRequired(true)
       )
   ]);
 });
 
-/* -------------------- INTERACTIONS -------------------- */
+/* ================= INTERACTIONS ================= */
 client.on("interactionCreate", async interaction => {
 
-  /* ---------------- /buy ---------------- */
+  /* ---------- /buy COMMAND ---------- */
   if (interaction.isChatInputCommand() && interaction.commandName === "buy") {
-    const product = interaction.options.getString("product");
-    const orderId = `ORD-${Date.now()}`;
 
-    await Orders.create({
-      orderId,
-      userId: interaction.user.id,
-      product,
-      status: "pending"
-    });
+    await interaction.deferReply({ ephemeral: true });
 
-    const embed = new EmbedBuilder()
-      .setTitle("🛒 New Order Request")
-      .setColor(0x00ff99)
-      .addFields(
-        { name: "User", value: `<@${interaction.user.id}>` },
-        { name: "Product", value: product },
-        { name: "Order ID", value: orderId }
-      )
-      .setTimestamp();
+    try {
+      const product = interaction.options.getString("product");
+      const orderId = `ORD-${Date.now()}`;
 
-    const buttons = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`approve_${orderId}`)
-        .setLabel("Approve")
-        .setStyle(ButtonStyle.Success),
+      await Orders.create({
+        orderId,
+        userId: interaction.user.id,
+        product,
+        status: "pending"
+      });
 
-      new ButtonBuilder()
-        .setCustomId(`reject_${orderId}`)
-        .setLabel("Reject")
-        .setStyle(ButtonStyle.Danger)
-    );
+      const embed = new EmbedBuilder()
+        .setTitle("🛒 New Order Request")
+        .setColor(0x00ff99)
+        .addFields(
+          { name: "User", value: `<@${interaction.user.id}>` },
+          { name: "Product", value: product },
+          { name: "Order ID", value: orderId }
+        )
+        .setTimestamp();
 
-    const adminChannel = client.channels.cache.get(config.adminChannelID);
-    if (adminChannel) {
-      adminChannel.send({ embeds: [embed], components: [buttons] });
+      const buttons = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`approve_${orderId}`)
+          .setLabel("Approve")
+          .setStyle(ButtonStyle.Success),
+
+        new ButtonBuilder()
+          .setCustomId(`reject_${orderId}`)
+          .setLabel("Reject")
+          .setStyle(ButtonStyle.Danger)
+      );
+
+      const adminChannel = client.channels.cache.get(config.adminChannelID);
+      if (adminChannel) {
+        await adminChannel.send({ embeds: [embed], components: [buttons] });
+      }
+
+      await interaction.editReply(
+        `✅ Order created!\n**Order ID:** ${orderId}\nWaiting for admin approval.`
+      );
+
+    } catch (err) {
+      console.log(err);
+      await interaction.editReply("❌ Something went wrong.");
     }
-
-    return interaction.reply({
-      content: `✅ Order created!\n**Order ID:** ${orderId}\nWaiting for admin approval.`,
-      ephemeral: true
-    });
   }
 
-  /* ---------------- /addstock (ADMIN) ---------------- */
+  /* ---------- /addstock COMMAND ---------- */
   if (interaction.isChatInputCommand() && interaction.commandName === "addstock") {
 
+    await interaction.deferReply({ ephemeral: true });
+
     if (!interaction.member.roles.cache.has(config.adminRoleID)) {
-      return interaction.reply({
-        content: "❌ Admin only command",
-        ephemeral: true
-      });
+      return interaction.editReply("❌ Admin only command.");
     }
 
-    const product = interaction.options.getString("product");
-    const data = interaction.options.getString("data");
+    try {
+      const product = interaction.options.getString("product");
+      const data = interaction.options.getString("data");
 
-    await Stock.create({
-      product,
-      data,
-      used: false
-    });
+      await Stock.create({
+        product,
+        data,
+        used: false
+      });
 
-    return interaction.reply({
-      content: `✅ Stock added for **${product}**`,
-      ephemeral: true
-    });
+      await interaction.editReply(`✅ Stock added for **${product}**`);
+
+    } catch (err) {
+      console.log(err);
+      await interaction.editReply("❌ Failed to add stock.");
+    }
   }
 
-  /* ---------------- BUTTON HANDLER ---------------- */
+  /* ---------- BUTTON HANDLER ---------- */
   if (interaction.isButton()) {
 
     if (!interaction.member.roles.cache.has(config.adminRoleID)) {
       return interaction.reply({
-        content: "❌ Admin only",
+        content: "❌ Admin only.",
         ephemeral: true
       });
     }
@@ -150,12 +157,12 @@ client.on("interactionCreate", async interaction => {
 
     if (!order || order.status !== "pending") {
       return interaction.reply({
-        content: "❌ Invalid or already processed order",
+        content: "❌ Order already processed.",
         ephemeral: true
       });
     }
 
-    /* ❌ REJECT */
+    /* ----- REJECT ----- */
     if (action === "reject") {
       order.status = "rejected";
       await order.save();
@@ -170,7 +177,7 @@ client.on("interactionCreate", async interaction => {
       });
     }
 
-    /* ✅ APPROVE */
+    /* ----- APPROVE ----- */
     if (action === "approve") {
       const stock = await Stock.findOne({
         product: order.product,
@@ -179,7 +186,7 @@ client.on("interactionCreate", async interaction => {
 
       if (!stock) {
         return interaction.reply({
-          content: "❌ No stock available",
+          content: "❌ No stock available.",
           ephemeral: true
         });
       }
@@ -192,14 +199,12 @@ client.on("interactionCreate", async interaction => {
 
       const user = await client.users.fetch(order.userId);
       await user.send(
-        `🎁 **Your ${order.product} delivery**\n\n${stock.data}`
+        `🎁 **Your ${order.product} delivery:**\n\n${stock.data}`
       ).catch(() => {});
 
       const logChannel = client.channels.cache.get(config.logChannelID);
       if (logChannel) {
-        logChannel.send(
-          `✅ **${order.product} delivered** to <@${order.userId}>`
-        );
+        logChannel.send(`✅ Delivered **${order.product}** to <@${order.userId}>`);
       }
 
       return interaction.update({
@@ -211,5 +216,5 @@ client.on("interactionCreate", async interaction => {
   }
 });
 
-/* -------------------- LOGIN -------------------- */
+/* ================= LOGIN ================= */
 client.login(config.token);
