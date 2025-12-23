@@ -62,7 +62,7 @@ client.once("ready", async () => {
 /* ================= INTERACTIONS ================= */
 client.on("interactionCreate", async interaction => {
 
-  /* ---------- /buy COMMAND ---------- */
+  /* ---------- /request COMMAND ---------- */
   if (interaction.isChatInputCommand() && interaction.commandName === "request") {
 
     await interaction.deferReply({ ephemeral: true });
