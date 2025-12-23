@@ -27,41 +27,28 @@ mongoose
   .catch(err => console.log("❌ MongoDB Error:", err));
 
 /* ================= BOT READY ================= */
-client.once("ready", async () => {
-  console.log(`🤖 Logged in as ${client.user.tag}`);
+const commands = [
+  new SlashCommandBuilder()
+    .setName("addstock")
+    .setDescription("Add stock (admin only)")
+    .addStringOption(o =>
+      o.setName("product").setDescription("Product").setRequired(true)
+    )
+    .addStringOption(o =>
+      o.setName("data").setDescription("Code / Account").setRequired(true)
+    ),
 
-  await client.application.commands.set([
-    new SlashCommandBuilder()
-      .setName("request")
-      .setDescription("Request a product")
-      .addStringOption(option =>
-        option
-          .setName("product")
-          .setDescription("minecraft / crunchyroll")
-          .setRequired(true)
-      ),
+  new SlashCommandBuilder()
+    .setName("request")
+    .setDescription("request a product")
+    .addStringOption(o =>
+      o.setName("product").setDescription("Product").setRequired(true)
+    ),
 
-    new SlashCommandBuilder()
+  new SlashCommandBuilder()
     .setName("stockcount")
-    .setDescription("📦 View remaining stock count")
-]
-.map(command => command.toJSON());
-  
-    new SlashCommandBuilder()
-      .setName("addstock")
-      .setDescription("Add stock (Admin only)")
-      .addStringOption(option =>
-        option
-          .setName("product")
-          .setDescription("minecraft / crunchyroll")
-          .setRequired(true)
-      )
-      .addStringOption(option =>
-        option
-          .setName("data")
-          .setDescription("Gift code or account")
-          .setRequired(true)
-      )
+    .setDescription("📦 View remaining stock")
+].map(cmd => cmd.toJSON());
   ]);
 });
 
