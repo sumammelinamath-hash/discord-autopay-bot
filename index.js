@@ -1,228 +1,184 @@
-// =====================
-// IMPORTS
-// =====================
 const {
   Client,
   GatewayIntentBits,
-  Partials,
   SlashCommandBuilder,
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonStyle,
-  REST,
-  Routes
+  ButtonStyle
 } = require("discord.js");
+
 const mongoose = require("mongoose");
+const config = require("./config");
+const Stock = require("./models/Stock");
+const Orders = require("./models/Orders");
 
-// =====================
-// CONFIG (EDIT VALUES ONLY)
-// =====================
-const CONFIG = {
-  DISCORD_TOKEN: "5c6c9e6323ec93e4f393e79aa6c4f3b7387bd9a974acf7d1c16ec868eeb5bd75",
-  CLIENT_ID: "1452604899505209365",
-  GUILD_ID: "1429867009537212580",
-  ADMIN_ROLE_ID: "1451213671014469653",
-  ADMIN_CHANNEL_ID: "1446852742361514118",
-  MONGO_URI: "mongodb+srv://Shreyas:shreyas234@discordautopaybot.8z4zciy.mongodb.net/discordbot?appName=discordautopaybot"
-};
-
-// =====================
-// CLIENT SETUP
-// =====================
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
     GatewayIntentBits.DirectMessages
-  ],
-  partials: [Partials.Channel]
+  ]
 });
 
-// =====================
-// DATABASE MODELS
-// =====================
-const Stock = mongoose.model(
-  "Stock",
-  new mongoose.Schema({
-    product: String,
-    data: String,
-    used: { type: Boolean, default: false }
-  })
-);
-
-const Order = mongoose.model(
-  "Order",
-  new mongoose.Schema({
-    orderId: String,
-    userId: String,
-    product: String,
-    status: String // pending | approved | rejected
-  })
-);
-
-// =====================
-// SLASH COMMANDS (BUILDER STYLE)
-// =====================
-const commands = [
-  new SlashCommandBuilder()
-    .setName("addstock")
-    .setDescription("Add stock (admin only)")
-    .addStringOption(o =>
-      o.setName("product").setDescription("Product name").setRequired(true)
-    )
-    .addStringOption(o =>
-      o.setName("data").setDescription("Code / account").setRequired(true)
-    ),
-
-  new SlashCommandBuilder()
-    .setName("request")
-    .setDescription("Request a product")
-    .addStringOption(o =>
-      o.setName("product").setDescription("Product name").setRequired(true)
-    ),
-
-  new SlashCommandBuilder()
-    .setName("stockcount")
-    .setDescription("📦 View remaining stock")
-].map(cmd => cmd.toJSON());
-
-// =====================
-// REGISTER SLASH COMMANDS
-// =====================
-const rest = new REST({ version: "10" }).setToken(CONFIG.DISCORD_TOKEN);
-
-(async () => {
-  await rest.put(
-    Routes.applicationGuildCommands(CONFIG.CLIENT_ID, CONFIG.GUILD_ID),
-    { body: commands }
-  );
-  console.log("✅ Slash commands registered");
-})();
-
-// =====================
-// MONGODB CONNECT
-// =====================
+/* ================= MONGODB CONNECT ================= */
 mongoose
-  .connect(CONFIG.MONGO_URI)
+  .connect(config.mongoURI)
   .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.error("MongoDB Error:", err));
+  .catch(err => console.log("❌ MongoDB Error:", err));
 
-// =====================
-// READY
-// =====================
-client.once("ready", () => {
+/* ================= BOT READY ================= */
+client.once("ready", async () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
+
+  await client.application.commands.set([
+    new SlashCommandBuilder()
+      .setName("buy")
+      .setDescription("Request a product")
+      .addStringOption(option =>
+        option
+          .setName("product")
+          .setDescription("minecraft / crunchyroll")
+          .setRequired(true)
+      ),
+
+    new SlashCommandBuilder()
+      .setName("addstock")
+      .setDescription("Add stock (Admin only)")
+      .addStringOption(option =>
+        option
+          .setName("product")
+          .setDescription("minecraft / crunchyroll")
+          .setRequired(true)
+      )
+      .addStringOption(option =>
+        option
+          .setName("data")
+          .setDescription("Gift code or account")
+          .setRequired(true)
+      )
+  ]);
 });
 
-// =====================
-// INTERACTIONS
-// =====================
+/* ================= INTERACTIONS ================= */
 client.on("interactionCreate", async interaction => {
 
-  // =====================
-  // SLASH COMMANDS
-  // =====================
-  if (interaction.isChatInputCommand()) {
+  /* ---------- /buy COMMAND ---------- */
+  if (interaction.isChatInputCommand() && interaction.commandName === "buy") {
 
-    // /addstock
-    if (interaction.commandName === "addstock") {
-      if (!interaction.member.roles.cache.has(CONFIG.ADMIN_ROLE_ID)) {
-        return interaction.reply({ content: "❌ Admin only", ephemeral: true });
-      }
+    await interaction.deferReply({ ephemeral: true });
 
-      await Stock.create({
-        product: interaction.options.getString("product"),
-        data: interaction.options.getString("data")
-      });
-
-      return interaction.reply("✅ Stock added successfully");
-    }
-
-    // /buy
-    if (interaction.commandName === "request") {
+    try {
+      const product = interaction.options.getString("product");
       const orderId = `ORD-${Date.now()}`;
 
-      await Order.create({
+      await Orders.create({
         orderId,
         userId: interaction.user.id,
-        product: interaction.options.getString("product"),
+        product,
         status: "pending"
       });
 
       const embed = new EmbedBuilder()
-        .setTitle("🛒 New Purchase Request")
+        .setTitle("🛒 New Order Request")
+        .setColor(0x00ff99)
         .addFields(
-          { name: "User", value: interaction.user.tag },
-          { name: "Product", value: interaction.options.getString("product") },
+          { name: "User", value: `<@${interaction.user.id}>` },
+          { name: "Product", value: product },
           { name: "Order ID", value: orderId }
         )
-        .setColor(0xffcc00);
+        .setTimestamp();
 
       const buttons = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId(`approve_${orderId}`)
-          .setLabel("✅ Approve")
+          .setLabel("Approve")
           .setStyle(ButtonStyle.Success),
+
         new ButtonBuilder()
           .setCustomId(`reject_${orderId}`)
-          .setLabel("❌ Reject")
+          .setLabel("Reject")
           .setStyle(ButtonStyle.Danger)
       );
 
-      const adminChannel = await client.channels.fetch(CONFIG.ADMIN_CHANNEL_ID);
-      await adminChannel.send({ embeds: [embed], components: [buttons] });
+      const adminChannel = client.channels.cache.get(config.adminChannelID);
+      if (adminChannel) {
+        await adminChannel.send({ embeds: [embed], components: [buttons] });
+      }
 
+      await interaction.editReply(
+        `✅ Order created!\n**Order ID:** ${orderId}\nWaiting for admin approval.`
+      );
+
+    } catch (err) {
+      console.log(err);
+      await interaction.editReply("❌ Something went wrong.");
+    }
+  }
+
+  /* ---------- /addstock COMMAND ---------- */
+  if (interaction.isChatInputCommand() && interaction.commandName === "addstock") {
+
+    await interaction.deferReply({ ephemeral: true });
+
+    if (!interaction.member.roles.cache.has(config.adminRoleID)) {
+      return interaction.editReply("❌ Admin only command.");
+    }
+
+    try {
+      const product = interaction.options.getString("product");
+      const data = interaction.options.getString("data");
+
+      await Stock.create({
+        product,
+        data,
+        used: false
+      });
+
+      await interaction.editReply(`✅ Stock added for **${product}**`);
+
+    } catch (err) {
+      console.log(err);
+      await interaction.editReply("❌ Failed to add stock.");
+    }
+  }
+
+  /* ---------- BUTTON HANDLER ---------- */
+  if (interaction.isButton()) {
+
+    if (!interaction.member.roles.cache.has(config.adminRoleID)) {
       return interaction.reply({
-        content: "🕒 Order sent for admin approval",
+        content: "❌ Admin only.",
         ephemeral: true
       });
     }
 
-    // /stockcount
-    if (interaction.commandName === "stockcount") {
-      const stocks = await Stock.find({ used: false });
-      if (!stocks.length) {
-        return interaction.reply({
-          content: "❌ No stock available",
-          ephemeral: true
-        });
-      }
+    const [action, orderId] = interaction.customId.split("_");
+    const order = await Orders.findOne({ orderId });
 
-      const counts = {};
-      stocks.forEach(s => {
-        counts[s.product] = (counts[s.product] || 0) + 1;
+    if (!order || order.status !== "pending") {
+      return interaction.reply({
+        content: "❌ Order already processed.",
+        ephemeral: true
       });
-
-      let text = "";
-      for (const p in counts) {
-        text += `📦 **${p}** → ${counts[p]} remaining\n`;
-      }
-
-      const embed = new EmbedBuilder()
-        .setTitle("📊 Stock Count")
-        .setDescription(text)
-        .setColor(0x00ff99);
-
-      return interaction.reply({ embeds: [embed] });
     }
-  }
 
-  // =====================
-  // BUTTON INTERACTIONS
-  // =====================
-  if (interaction.isButton()) {
+    /* ----- REJECT ----- */
+    if (action === "reject") {
+      order.status = "rejected";
+      await order.save();
 
-    // APPROVE ORDER
-    if (interaction.customId.startsWith("approve_")) {
-      if (!interaction.member.roles.cache.has(CONFIG.ADMIN_ROLE_ID)) {
-        return interaction.reply({ content: "❌ Admin only", ephemeral: true });
-      }
+      const user = await client.users.fetch(order.userId);
+      user.send(`❌ Your **${order.product}** order was rejected.`).catch(() => {});
 
-      const orderId = interaction.customId.split("_")[1];
-      const order = await Order.findOne({ orderId });
-      if (!order) return;
+      return interaction.update({
+        content: "❌ Order rejected",
+        embeds: [],
+        components: []
+      });
+    }
 
+    /* ----- APPROVE ----- */
+    if (action === "approve") {
       const stock = await Stock.findOne({
         product: order.product,
         used: false
@@ -230,7 +186,7 @@ client.on("interactionCreate", async interaction => {
 
       if (!stock) {
         return interaction.reply({
-          content: "❌ No stock available",
+          content: "❌ No stock available.",
           ephemeral: true
         });
       }
@@ -238,67 +194,40 @@ client.on("interactionCreate", async interaction => {
       stock.used = true;
       await stock.save();
 
-      order.status = "approved";
+      order.status = "completed";
       await order.save();
 
       const user = await client.users.fetch(order.userId);
-
-      const embed = new EmbedBuilder()
-        .setTitle("🎁 Pʀᴏᴅᴜᴄᴛ Dᴇʟɪᴠᴇʀᴇᴅ Sᴜᴄᴄᴇssғᴜʟʟʏ")
-        .addFields(
-          { name: "Product", value: order.product },
-          { name: "Order ID", value: order.orderId },
-          { name: "🔒 Your Code", value: "```••••••••••```" }
-        )
-        .setColor(0x00ff99);
-
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`reveal_${order.orderId}`)
-          .setLabel("👁️ Reveal Code")
-          .setStyle(ButtonStyle.Primary)
-      );
-
-      await user.send({ embeds: [embed], components: [row] });
-      return interaction.update({ content: "✅ Order approved", components: [] });
+      const deliveryEmbed = new EmbedBuilder()
+  .setTitle("🎁 Product Delivered Successfully")
+  .setColor(0x00ff99)
+  .addFields(
+    { name: "📦 Product", value: order.product, inline: true },
+    { name: "🆔 Order ID", value: order.orderId, inline: true },
+    { name: "🔑 Your Code / Account", value: `\`\`\`${stock.data}\`\`\`` },
+    {
+      name: "⚠️ Important",
+      value: "Do NOT share this with anyone. This is for **one-time use only**."
     }
+  )
+  .setFooter({ text: "Need help? Contact server admin." })
+  .setTimestamp();
 
-    // REJECT ORDER
-    if (interaction.customId.startsWith("reject_")) {
-      return interaction.update({
-        content: "❌ Order rejected",
-        components: []
-      });
-    }
+await user.send({ embeds: [deliveryEmbed] });
 
-    // REVEAL CODE
-    if (interaction.customId.startsWith("reveal_")) {
-      const orderId = interaction.customId.split("_")[1];
-      const order = await Order.findOne({ orderId });
-
-      if (!order || interaction.user.id !== order.userId) {
-        return interaction.reply({
-          content: "❌ Not allowed",
-          ephemeral: true
-        });
+      const logChannel = client.channels.cache.get(config.logChannelID);
+      if (logChannel) {
+        logChannel.send(`✅ Delivered **${order.product}** to <@${order.userId}>`);
       }
 
-      const stock = await Stock.findOne({
-        product: order.product,
-        used: true
-      }).sort({ _id: -1 });
-
-      const embed = new EmbedBuilder()
-        .setTitle("🔓 Code Revealed")
-        .setDescription(`\`\`\`${stock.data}\`\`\``)
-        .setColor(0x00ff99);
-
-      return interaction.update({ embeds: [embed], components: [] });
+      return interaction.update({
+        content: "✅ Order approved & delivered",
+        embeds: [],
+        components: []
+      });
     }
   }
 });
 
-// =====================
-// LOGIN
-// =====================
-client.login(CONFIG.DISCORD_TOKEN);
+/* ================= LOGIN ================= */
+client.login(config.token);
