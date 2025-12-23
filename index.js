@@ -199,31 +199,21 @@ client.on("interactionCreate", async interaction => {
 
       const user = await client.users.fetch(order.userId);
       const deliveryEmbed = new EmbedBuilder()
-  .setTitle("🎁 Product Delivered")
+  .setTitle("🎁 Product Delivered Successfully")
   .setColor(0x00ff99)
   .addFields(
     { name: "📦 Product", value: order.product, inline: true },
     { name: "🆔 Order ID", value: order.orderId, inline: true },
-    { name: "🔒 Your Code", value: "```••••••••••••```" },
+    { name: "🔑 Your Code / Account", value: `\`\`\`${stock.data}\`\`\`` },
     {
       name: "⚠️ Important",
-      value: "Click **Reveal Code** to view.\nDo NOT share this code."
+      value: "Do NOT share this with anyone. This is for **one-time use only**."
     }
   )
-  .setFooter({ text: "Auto Delivery System" })
+  .setFooter({ text: "Need help? Contact server admin." })
   .setTimestamp();
 
-const revealButton = new ActionRowBuilder().addComponents(
-  new ButtonBuilder()
-    .setCustomId(`reveal_${order.orderId}`)
-    .setLabel("👁️ Reveal Code")
-    .setStyle(ButtonStyle.Primary)
-);
-
-await user.send({
-  embeds: [deliveryEmbed],
-  components: [revealButton]
-});
+await user.send({ embeds: [deliveryEmbed] });
 
       const logChannel = client.channels.cache.get(config.logChannelID);
       if (logChannel) {
