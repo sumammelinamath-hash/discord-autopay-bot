@@ -31,6 +31,8 @@ client.once("ready", async () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
 
   await client.application.commands.set([
+
+    /* /buy */
     new SlashCommandBuilder()
       .setName("buy")
       .setDescription("Request a product")
@@ -39,6 +41,23 @@ client.once("ready", async () => {
           .setName("product")
           .setDescription("minecraft / crunchyroll")
           .setRequired(true)
+      ),
+
+    /* /addstock (ADMIN) */
+    new SlashCommandBuilder()
+      .setName("addstock")
+      .setDescription("Add product stock (Admin only)")
+      .addStringOption(option =>
+        option
+          .setName("product")
+          .setDescription("minecraft / crunchyroll")
+          .setRequired(true)
+      )
+      .addStringOption(option =>
+        option
+          .setName("data")
+          .setDescription("Gift code OR email:password")
+          .setRequired(true)
       )
   ]);
 });
@@ -46,15 +65,15 @@ client.once("ready", async () => {
 /* -------------------- INTERACTIONS -------------------- */
 client.on("interactionCreate", async interaction => {
 
-  /* ----------- /buy COMMAND ----------- */
+  /* ---------------- /buy ---------------- */
   if (interaction.isChatInputCommand() && interaction.commandName === "buy") {
     const product = interaction.options.getString("product");
     const orderId = `ORD-${Date.now()}`;
 
     await Orders.create({
-      orderId: orderId,
+      orderId,
       userId: interaction.user.id,
-      product: product,
+      product,
       status: "pending"
     });
 
@@ -85,50 +104,73 @@ client.on("interactionCreate", async interaction => {
       adminChannel.send({ embeds: [embed], components: [buttons] });
     }
 
-    await interaction.reply({
-      content: `✅ **Order Created**\nOrder ID: **${orderId}**\nPlease wait for admin approval.`,
+    return interaction.reply({
+      content: `✅ Order created!\n**Order ID:** ${orderId}\nWaiting for admin approval.`,
       ephemeral: true
     });
   }
 
-  /* ----------- BUTTON HANDLER ----------- */
-  if (interaction.isButton()) {
+  /* ---------------- /addstock (ADMIN) ---------------- */
+  if (interaction.isChatInputCommand() && interaction.commandName === "addstock") {
 
-    // Admin check
     if (!interaction.member.roles.cache.has(config.adminRoleID)) {
       return interaction.reply({
-        content: "❌ You are not allowed to do this.",
+        content: "❌ Admin only command",
+        ephemeral: true
+      });
+    }
+
+    const product = interaction.options.getString("product");
+    const data = interaction.options.getString("data");
+
+    await Stock.create({
+      product,
+      data,
+      used: false
+    });
+
+    return interaction.reply({
+      content: `✅ Stock added for **${product}**`,
+      ephemeral: true
+    });
+  }
+
+  /* ---------------- BUTTON HANDLER ---------------- */
+  if (interaction.isButton()) {
+
+    if (!interaction.member.roles.cache.has(config.adminRoleID)) {
+      return interaction.reply({
+        content: "❌ Admin only",
         ephemeral: true
       });
     }
 
     const [action, orderId] = interaction.customId.split("_");
-    const order = await Orders.findOne({ orderId: orderId });
+    const order = await Orders.findOne({ orderId });
 
     if (!order || order.status !== "pending") {
       return interaction.reply({
-        content: "❌ This order is invalid or already processed.",
+        content: "❌ Invalid or already processed order",
         ephemeral: true
       });
     }
 
-    /* ----------- REJECT ORDER ----------- */
+    /* ❌ REJECT */
     if (action === "reject") {
       order.status = "rejected";
       await order.save();
 
       const user = await client.users.fetch(order.userId);
-      user.send(`❌ Your **${order.product}** order has been rejected.`)
-        .catch(() => {});
+      user.send(`❌ Your **${order.product}** order was rejected.`).catch(() => {});
 
       return interaction.update({
-        content: "❌ Order Rejected",
+        content: "❌ Order rejected",
         embeds: [],
         components: []
       });
     }
 
-    /* ----------- APPROVE ORDER ----------- */
+    /* ✅ APPROVE */
     if (action === "approve") {
       const stock = await Stock.findOne({
         product: order.product,
@@ -137,7 +179,7 @@ client.on("interactionCreate", async interaction => {
 
       if (!stock) {
         return interaction.reply({
-          content: "❌ No stock available.",
+          content: "❌ No stock available",
           ephemeral: true
         });
       }
@@ -161,7 +203,7 @@ client.on("interactionCreate", async interaction => {
       }
 
       return interaction.update({
-        content: "✅ Order Approved & Delivered",
+        content: "✅ Order approved & delivered",
         embeds: [],
         components: []
       });
