@@ -185,6 +185,7 @@ client.on("interactionCreate", async interaction => {
 
   await interaction.reply({ embeds: [embed] });
   }
+}
   
   /* ---------- BUTTON HANDLER ---------- */
   if (interaction.isButton()) {
