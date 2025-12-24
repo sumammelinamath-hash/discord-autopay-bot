@@ -187,39 +187,41 @@ client.on("interactionCreate", async interaction => {
   }
 
   /* ================= AUTO IMPORT STOCK ================= */
-  if (interaction.isChatInputCommand() && interaction.commandName === "importstock") {
-    await interaction.deferReply({ ephemeral: true });
+if (interaction.isChatInputCommand() && interaction.commandName === "importstock") {
+  await interaction.deferReply({ ephemeral: true });
 
-    if (!interaction.member.roles.cache.has(config.adminRoleID))
-      return interaction.editReply("❌ Admin only");
+  if (!interaction.member.roles.cache.has(config.adminRoleID))
+    return interaction.editReply("❌ Admin only");
 
-    const product = interaction.options.getString("product");
-    const attachment = interaction.options.getAttachment("file");
+  const product = interaction.options.getString("product");
+  const attachment = interaction.options.getAttachment("file");
 
-    if (!attachment.name.endsWith(".txt"))
-      return interaction.editReply("❌ Only .txt files allowed");
+  if (!attachment.name.endsWith(".txt"))
+    return interaction.editReply("❌ Only .txt files allowed");
 
-    // Download file content using Discord.js built-in function
-    const buffer = await attachment.download();
-    const text = buffer.toString("utf-8");
+  // Download file content
+  const buffer = await attachment.download();
+  const text = buffer.toString("utf-8");
 
-    const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
 
-    if (!lines.length)
-      return interaction.editReply("❌ File is empty");
+  if (!lines.length)
+    return interaction.editReply("❌ File is empty");
 
-    for (const line of lines) {
-      await Stock.create({ product, data: line, used: false });
+  // Prepare bulk insert
+  const stocksToInsert = lines.map(line => ({ product, data: line, used: false }));
+
+  // Insert all at once
+  await Stock.insertMany(stocksToInsert);
+
+  return interaction.editReply({
+    embeds: [
+      createEmbed()
+        .setTitle("✅ Auto Restock Complete")
+        .setDescription(`📦 **Product:** ${product}\n📥 **Imported:** ${lines.length} stocks`)
+    ]
+  });
     }
-
-    return interaction.editReply({
-      embeds: [
-        createEmbed()
-          .setTitle("✅ Auto Restock Complete")
-          .setDescription(`📦 **Product:** ${product}\n📥 **Imported:** ${lines.length} stocks`)
-      ]
-    });
-  }
 
   /* ================= STOCK COUNT ================= */
   if (interaction.isChatInputCommand() && interaction.commandName === "stockcount") {
