@@ -13,6 +13,17 @@ const config = require("./config");
 const Stock = require("./models/Stock");
 const Orders = require("./models/Orders");
 
+/* ================= BRAND ================= */
+const BRAND = config.brand;
+
+function createEmbed() {
+  return new EmbedBuilder()
+    .setColor(BRAND.color)
+    .setAuthor({ name: BRAND.name, iconURL: BRAND.logo })
+    .setFooter({ text: BRAND.footer, iconURL: BRAND.logo })
+    .setTimestamp();
+}
+
 /* ================= CLIENT ================= */
 const client = new Client({
   intents: [
@@ -32,35 +43,23 @@ client.once("ready", async () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
 
   await client.application.commands.set([
-
-    // 🔄 RENAMED COMMAND
     new SlashCommandBuilder()
       .setName("request")
       .setDescription("Request a product")
       .addStringOption(option =>
-        option
-          .setName("product")
-          .setDescription("minecraft / crunchyroll")
-          .setRequired(true)
+        option.setName("product").setDescription("minecraft / crunchyroll").setRequired(true)
       ),
 
     new SlashCommandBuilder()
       .setName("addstock")
       .setDescription("Add stock (Admin only)")
       .addStringOption(option =>
-        option
-          .setName("product")
-          .setDescription("minecraft / crunchyroll")
-          .setRequired(true)
+        option.setName("product").setDescription("minecraft / crunchyroll").setRequired(true)
       )
       .addStringOption(option =>
-        option
-          .setName("data")
-          .setDescription("Gift code or account")
-          .setRequired(true)
+        option.setName("data").setDescription("Gift code or account").setRequired(true)
       ),
 
-    // 🆕 STOCK COUNT
     new SlashCommandBuilder()
       .setName("stockcount")
       .setDescription("View available stock count")
@@ -86,15 +85,13 @@ client.on("interactionCreate", async interaction => {
         status: "pending"
       });
 
-      const embed = new EmbedBuilder()
+      const adminEmbed = createEmbed()
         .setTitle("🛒 New Order Request")
-        .setColor(0x00ff99)
         .addFields(
-          { name: "👤 User", value: `<@${interaction.user.id}>` },
-          { name: "📦 Product", value: product },
-          { name: "🆔 Order ID", value: orderId }
-        )
-        .setTimestamp();
+          { name: "👤 User", value: `<@${interaction.user.id}>`, inline: true },
+          { name: "📦 Product", value: product, inline: true },
+          { name: "🆔 Order ID", value: orderId, inline: true }
+        );
 
       const buttons = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -109,12 +106,22 @@ client.on("interactionCreate", async interaction => {
 
       const adminChannel = client.channels.cache.get(config.adminChannelID);
       if (adminChannel) {
-        await adminChannel.send({ embeds: [embed], components: [buttons] });
+        await adminChannel.send({ embeds: [adminEmbed], components: [buttons] });
       }
 
-      await interaction.editReply(
-        `✅ Order created!\n🆔 **Order ID:** \`${orderId}\`\n⏳ Waiting for admin approval.`
-      );
+      const userEmbed = createEmbed()
+        .setTitle("✅ Order Submitted")
+        .setDescription(
+          "Your request has been successfully submitted.\n\n" +
+          "⏳ Please wait for admin approval."
+        )
+        .addFields(
+          { name: "📦 Product", value: product, inline: true },
+          { name: "🆔 Order ID", value: orderId, inline: true },
+          { name: "📊 Status", value: "Pending", inline: true }
+        );
+
+      await interaction.editReply({ embeds: [userEmbed] });
 
     } catch (err) {
       console.log(err);
@@ -135,13 +142,16 @@ client.on("interactionCreate", async interaction => {
       const product = interaction.options.getString("product");
       const data = interaction.options.getString("data");
 
-      await Stock.create({
-        product,
-        data,
-        used: false
-      });
+      await Stock.create({ product, data, used: false });
 
-      await interaction.editReply(`✅ Stock added for **${product}**`);
+      const embed = createEmbed()
+        .setTitle("✅ Stock Added Successfully")
+        .addFields(
+          { name: "📦 Product", value: product },
+          { name: "📊 Status", value: "Available" }
+        );
+
+      await interaction.editReply({ embeds: [embed] });
 
     } catch (err) {
       console.log(err);
@@ -156,24 +166,20 @@ client.on("interactionCreate", async interaction => {
 
     try {
       const stocks = await Stock.find({ used: false });
-
       if (!stocks.length) {
         return interaction.editReply("❌ No stock available.");
       }
 
       const map = {};
-      stocks.forEach(s => {
-        map[s.product] = (map[s.product] || 0) + 1;
-      });
+      stocks.forEach(s => map[s.product] = (map[s.product] || 0) + 1);
 
       let desc = "";
       for (const p in map) {
         desc += `📦 **${p}** → ${map[p]}\n`;
       }
 
-      const embed = new EmbedBuilder()
-        .setTitle("📊 Stock Count")
-        .setColor(0x0099ff)
+      const embed = createEmbed()
+        .setTitle("📊 Live Stock Inventory")
         .setDescription(desc);
 
       await interaction.editReply({ embeds: [embed] });
@@ -198,18 +204,16 @@ client.on("interactionCreate", async interaction => {
       return interaction.reply({ content: "❌ Order already processed.", ephemeral: true });
     }
 
-    /* ----- REJECT ----- */
     if (action === "reject") {
       order.status = "rejected";
       await order.save();
 
       const user = await client.users.fetch(order.userId);
-      user.send(`❌ Your **${order.product}** order was rejected.`).catch(() => {});
+      user.send("❌ Your order was rejected.").catch(() => {});
 
       return interaction.update({ content: "❌ Order rejected", embeds: [], components: [] });
     }
 
-    /* ----- APPROVE ----- */
     if (action === "approve") {
 
       const stock = await Stock.findOne({ product: order.product, used: false });
@@ -225,23 +229,32 @@ client.on("interactionCreate", async interaction => {
 
       const user = await client.users.fetch(order.userId);
 
-      // ⭐ BETTER DELIVERY DM
-      const dmEmbed = new EmbedBuilder()
-        .setTitle("🎁 Order Delivered")
-        .setColor(0x00ff99)
-        .addFields(
-          { name: "📦 Product", value: order.product },
-          { name: "🆔 Order ID", value: order.orderId },
-          { name: "🔐 Your Item", value: `\`\`\`${stock.data}\`\`\`` }
+      const deliveryEmbed = createEmbed()
+        .setTitle("🎉 DELIVERY CONFIRMED")
+        .setDescription(
+          "Your order has been **approved and securely delivered**.\n\n" +
+          "⚠️ Keep this information private."
         )
-        .setFooter({ text: "Thank you for your purchase ❤️" })
-        .setTimestamp();
+        .addFields(
+          {
+            name: "📦 Order Details",
+            value:
+              `🆔 **Order ID:** \`${order.orderId}\`\n` +
+              `📦 **Product:** \`${order.product}\`\n` +
+              `📊 **Status:** Completed`
+          },
+          {
+            name: "🔐 Secure Delivery",
+            value: `||\`\`\`\n${stock.data}\n\`\`\`||`
+          }
+        )
+        .setImage(BRAND.logo);
 
-      await user.send({ embeds: [dmEmbed] }).catch(() => {});
+      await user.send({ embeds: [deliveryEmbed] }).catch(() => {});
 
       const logChannel = client.channels.cache.get(config.logChannelID);
       if (logChannel) {
-        logChannel.send(`✅ Delivered **${order.product}** to <@${order.userId}>`);
+        logChannel.send({ embeds: [deliveryEmbed] });
       }
 
       return interaction.update({
