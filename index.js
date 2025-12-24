@@ -5,7 +5,10 @@ const {
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonStyle
+  ButtonStyle,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle
 } = require("discord.js");
 
 const mongoose = require("mongoose");
@@ -32,13 +35,13 @@ const client = new Client({
   ]
 });
 
-/* ================= MONGODB CONNECT ================= */
+/* ================= MONGODB ================= */
 mongoose
   .connect(config.mongoURI)
   .then(() => console.log("✅ MongoDB Connected"))
   .catch(err => console.log("❌ MongoDB Error:", err));
 
-/* ================= BOT READY ================= */
+/* ================= READY ================= */
 client.once("ready", async () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
 
@@ -97,19 +100,16 @@ client.on("interactionCreate", async interaction => {
     );
 
     const adminChannel = client.channels.cache.get(config.adminChannelID);
-    if (adminChannel) {
-      adminChannel.send({ embeds: [adminEmbed], components: [buttons] });
-    }
+    if (adminChannel) adminChannel.send({ embeds: [adminEmbed], components: [buttons] });
 
     await interaction.editReply({
       embeds: [
         createEmbed()
           .setTitle("✅ Order Submitted")
-          .setDescription("Your request has been sent.\n⏳ Waiting for admin approval.")
+          .setDescription("⏳ Waiting for admin approval.")
           .addFields(
             { name: "📦 Product", value: product, inline: true },
-            { name: "🆔 Order ID", value: orderId, inline: true },
-            { name: "📊 Status", value: "Pending", inline: true }
+            { name: "🆔 Order ID", value: orderId, inline: true }
           )
       ]
     });
@@ -119,9 +119,8 @@ client.on("interactionCreate", async interaction => {
   if (interaction.isChatInputCommand() && interaction.commandName === "addstock") {
     await interaction.deferReply({ ephemeral: true });
 
-    if (!interaction.member.roles.cache.has(config.adminRoleID)) {
+    if (!interaction.member.roles.cache.has(config.adminRoleID))
       return interaction.editReply("❌ Admin only command.");
-    }
 
     await Stock.create({
       product: interaction.options.getString("product"),
@@ -130,11 +129,7 @@ client.on("interactionCreate", async interaction => {
     });
 
     await interaction.editReply({
-      embeds: [
-        createEmbed()
-          .setTitle("✅ Stock Added")
-          .setDescription("Stock successfully added and ready for delivery.")
-      ]
+      embeds: [createEmbed().setTitle("✅ Stock Added")]
     });
   }
 
@@ -152,43 +147,59 @@ client.on("interactionCreate", async interaction => {
     for (const p in map) desc += `📦 **${p}** → ${map[p]}\n`;
 
     await interaction.editReply({
-      embeds: [
-        createEmbed()
-          .setTitle("📊 Live Stock Inventory")
-          .setDescription(desc)
-      ]
+      embeds: [createEmbed().setTitle("📊 Stock Count").setDescription(desc)]
     });
   }
 
-  /* ---------- BUTTON HANDLER ---------- */
+  /* ---------- BUTTONS ---------- */
   if (interaction.isButton()) {
 
-    if (!interaction.member.roles.cache.has(config.adminRoleID)) {
-      return interaction.reply({ content: "❌ Admin only.", ephemeral: true });
+    /* ⭐ REVIEW BUTTON */
+    if (interaction.customId === "leave_review") {
+      const modal = new ModalBuilder()
+        .setCustomId("review_modal")
+        .setTitle("⭐ Leave a Review");
+
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId("rating")
+            .setLabel("Rating (1-5)")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+        ),
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId("comment")
+            .setLabel("Your feedback")
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+        )
+      );
+
+      return interaction.showModal(modal);
     }
+
+    if (!interaction.member.roles.cache.has(config.adminRoleID))
+      return interaction.reply({ content: "❌ Admin only.", ephemeral: true });
 
     const [action, orderId] = interaction.customId.split("_");
     const order = await Orders.findOne({ orderId });
-    if (!order || order.status !== "pending") {
-      return interaction.reply({ content: "❌ Order already processed.", ephemeral: true });
-    }
+
+    if (!order || order.status !== "pending")
+      return interaction.reply({ content: "❌ Already processed.", ephemeral: true });
 
     /* ---------- REJECT ---------- */
     if (action === "reject") {
       order.status = "rejected";
       await order.save();
-
-      const user = await client.users.fetch(order.userId);
-      user.send("❌ Your order was rejected.").catch(() => {});
-
       return interaction.update({ content: "❌ Order rejected", components: [] });
     }
 
-    /* ---------- APPROVE (OPTION 2 DELIVERY) ---------- */
+    /* ---------- APPROVE ---------- */
     if (action === "approve") {
-
       const stock = await Stock.findOne({ product: order.product, used: false });
-      if (!stock) return interaction.reply({ content: "❌ No stock available.", ephemeral: true });
+      if (!stock) return interaction.reply({ content: "❌ No stock.", ephemeral: true });
 
       stock.used = true;
       await stock.save();
@@ -198,45 +209,41 @@ client.on("interactionCreate", async interaction => {
 
       const user = await client.users.fetch(order.userId);
 
-      // 💎 ULTRA PREMIUM DELIVERY DM
-      const deliveryEmbed = new EmbedBuilder()
-        .setColor(BRAND.color)
-        .setAuthor({ name: `${BRAND.name} • Secure Delivery`, iconURL: BRAND.logo })
+      const deliveryEmbed = createEmbed()
         .setTitle("🎉 DELIVERY SUCCESSFUL")
         .setDescription(
-          "━━━━━━━━━━━━━━━━━━━━━━\n" +
-          "✨ **THANK YOU FOR YOUR PURCHASE** ✨\n" +
-          "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
           `📦 **Product:** ${order.product}\n` +
           `🆔 **Order ID:** \`${order.orderId}\`\n\n` +
-          "🔐 **Your Secure Item:**\n" +
-          "||```text\n" +
-          stock.data +
-          "\n```||\n\n" +
-          "⚠️ Do not share this with anyone."
-        )
-        .setThumbnail(BRAND.logo)
-        .setFooter({ text: BRAND.footer })
-        .setTimestamp();
+          "🔐 **Your Item:**\n||```text\n" + stock.data + "\n```||"
+        );
 
-      const dmButtons = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setLabel("📋 Copy (Manual)")
-          .setStyle(ButtonStyle.Secondary)
-          .setCustomId("copy_disabled"),
-        new ButtonBuilder()
-          .setLabel("🆘 Support")
-          .setStyle(ButtonStyle.Link)
-          .setURL(BRAND.supportUrl)
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setLabel("⭐ Leave Review").setCustomId("leave_review").setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setLabel("🆘 Support").setStyle(ButtonStyle.Link).setURL(BRAND.supportUrl)
       );
 
-      await user.send({ embeds: [deliveryEmbed], components: [dmButtons] }).catch(() => {});
-
-      const logChannel = client.channels.cache.get(config.logChannelID);
-      if (logChannel) logChannel.send({ embeds: [deliveryEmbed] });
-
-      return interaction.update({ content: "✅ Order approved & delivered", components: [] });
+      await user.send({ embeds: [deliveryEmbed], components: [row] }).catch(() => {});
+      return interaction.update({ content: "✅ Delivered", components: [] });
     }
+  }
+
+  /* ---------- REVIEW MODAL ---------- */
+  if (interaction.isModalSubmit() && interaction.customId === "review_modal") {
+    const rating = interaction.fields.getTextInputValue("rating");
+    const comment = interaction.fields.getTextInputValue("comment");
+
+    const reviewEmbed = createEmbed()
+      .setTitle("⭐ New Customer Review")
+      .addFields(
+        { name: "👤 User", value: `<@${interaction.user.id}>`, inline: true },
+        { name: "⭐ Rating", value: rating + "/5", inline: true },
+        { name: "💬 Review", value: comment }
+      );
+
+    const logChannel = client.channels.cache.get(config.logChannelID);
+    if (logChannel) logChannel.send({ embeds: [reviewEmbed] });
+
+    await interaction.reply({ content: "✅ Thanks for your review!", ephemeral: true });
   }
 });
 
