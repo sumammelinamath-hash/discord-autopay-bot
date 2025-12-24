@@ -6,9 +6,6 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle,
   StringSelectMenuBuilder,
   ActivityType
 } = require("discord.js");
@@ -40,7 +37,7 @@ function createEmbed() {
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers, // ✅ REQUIRED
+    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.DirectMessages
   ]
 });
@@ -70,11 +67,19 @@ client.once("ready", async () => {
   await client.application.commands.set([
     new SlashCommandBuilder().setName("panel").setDescription("Open store panel"),
     new SlashCommandBuilder().setName("request").setDescription("Request a product"),
+
     new SlashCommandBuilder()
       .setName("addstock")
       .setDescription("Add stock (Admin)")
       .addStringOption(o => o.setName("product").setDescription("Product").setRequired(true))
       .addStringOption(o => o.setName("data").setDescription("Code / Account").setRequired(true)),
+
+    new SlashCommandBuilder()
+      .setName("importstock")
+      .setDescription("Auto restock via TXT file (Admin)")
+      .addStringOption(o => o.setName("product").setDescription("Product name").setRequired(true))
+      .addAttachmentOption(o => o.setName("file").setDescription("Upload .txt file").setRequired(true)),
+
     new SlashCommandBuilder().setName("stockcount").setDescription("View stock"),
     new SlashCommandBuilder().setName("myorders").setDescription("Your orders")
   ]);
@@ -178,6 +183,41 @@ client.on("interactionCreate", async interaction => {
 
     return interaction.editReply({
       embeds: [createEmbed().setTitle("✅ Stock Added")]
+    });
+  }
+
+  /* ================= AUTO IMPORT STOCK ================= */
+  if (interaction.isChatInputCommand() && interaction.commandName === "importstock") {
+    await interaction.deferReply({ ephemeral: true });
+
+    if (!interaction.member.roles.cache.has(config.adminRoleID))
+      return interaction.editReply("❌ Admin only");
+
+    const product = interaction.options.getString("product");
+    const attachment = interaction.options.getAttachment("file");
+
+    if (!attachment.name.endsWith(".txt"))
+      return interaction.editReply("❌ Only .txt files allowed");
+
+    // Download file content using Discord.js built-in function
+    const buffer = await attachment.download();
+    const text = buffer.toString("utf-8");
+
+    const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+
+    if (!lines.length)
+      return interaction.editReply("❌ File is empty");
+
+    for (const line of lines) {
+      await Stock.create({ product, data: line, used: false });
+    }
+
+    return interaction.editReply({
+      embeds: [
+        createEmbed()
+          .setTitle("✅ Auto Restock Complete")
+          .setDescription(`📦 **Product:** ${product}\n📥 **Imported:** ${lines.length} stocks`)
+      ]
     });
   }
 
