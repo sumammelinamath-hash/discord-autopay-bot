@@ -7,6 +7,9 @@ const {
   ButtonBuilder,
   ButtonStyle,
   StringSelectMenuBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
   ActivityType
 } = require("discord.js");
 
@@ -14,23 +17,30 @@ const mongoose = require("mongoose");
 const config = require("./config");
 const Stock = require("./models/Stock");
 const Orders = require("./models/Orders");
+const Vouch = require("./models/Vouch");
 
 /* ================= BRAND ================= */
 const BRAND = config.brand;
 
-const EMOJIS = {
-  cart: "🛒",
-  fire: "🔥",
-  star: "⭐",
-  support: "🆘"
-};
-
+/* ================= EMBED HELPER ================= */
 function createEmbed() {
   return new EmbedBuilder()
     .setColor(BRAND.color)
-    .setAuthor({ name: `${BRAND.name} ${EMOJIS.fire}`, iconURL: BRAND.logo })
+    .setAuthor({ name: BRAND.name, iconURL: BRAND.logo })
     .setFooter({ text: BRAND.footer, iconURL: BRAND.logo })
     .setTimestamp();
+}
+
+/* ================= STAR ANIMATION ================= */
+function animatedStars(rating) {
+  const star = "⭐";
+  const glow = "✨";
+  const spark = "🌟";
+
+  let stars = star.repeat(rating);
+  let padding = glow.repeat(2);
+
+  return `${spark} ${padding} ${stars} ${padding} ${spark}`;
 }
 
 /* ================= CLIENT ================= */
@@ -43,45 +53,18 @@ const client = new Client({
 });
 
 /* ================= MONGODB ================= */
-mongoose
-  .connect(config.mongoURI)
+mongoose.connect(config.mongoURI)
   .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.log("❌ MongoDB Error:", err));
+  .catch(console.error);
 
 /* ================= READY ================= */
 client.once("ready", async () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
 
-  const statuses = [
-    { name: "MineCom Store 🛒", type: ActivityType.Watching },
-    { name: "Instant Delivery ⚡", type: ActivityType.Playing },
-    { name: "Secure Orders 🔐", type: ActivityType.Watching }
-  ];
-
-  let i = 0;
-  setInterval(() => {
-    client.user.setActivity(statuses[i]);
-    i = (i + 1) % statuses.length;
-  }, 8000);
+  client.user.setActivity("MineCom Store 🛒", { type: ActivityType.Watching });
 
   await client.application.commands.set([
-    new SlashCommandBuilder().setName("panel").setDescription("Open store panel"),
-    new SlashCommandBuilder().setName("request").setDescription("Request a product"),
-
-    new SlashCommandBuilder()
-      .setName("addstock")
-      .setDescription("Add stock (Admin)")
-      .addStringOption(o => o.setName("product").setDescription("Product").setRequired(true))
-      .addStringOption(o => o.setName("data").setDescription("Code / Account").setRequired(true)),
-
-    new SlashCommandBuilder()
-      .setName("importstock")
-      .setDescription("Auto restock via TXT file (Admin)")
-      .addStringOption(o => o.setName("product").setDescription("Product name").setRequired(true))
-      .addAttachmentOption(o => o.setName("file").setDescription("Upload .txt file").setRequired(true)),
-
-    new SlashCommandBuilder().setName("stockcount").setDescription("View stock"),
-    new SlashCommandBuilder().setName("myorders").setDescription("Your orders")
+    new SlashCommandBuilder().setName("panel").setDescription("Open store panel")
   ]);
 });
 
@@ -93,35 +76,34 @@ client.on("interactionCreate", async interaction => {
     return interaction.reply({
       embeds: [
         createEmbed()
-          .setTitle(`${EMOJIS.cart} MineCom Premium Store`)
+          .setTitle("🛒 MineCom Premium Store")
           .setDescription(
-            "⚡ **Fast Auto Delivery**\n" +
-            "🔐 **Secure & Trusted**\n" +
-            "🆘 **24/7 Support**\n\n" +
-            "Click below 👇"
+            "⚡ **Instant Delivery**\n" +
+            "🔐 **Secure Payments**\n" +
+            "⭐ **Trusted by Customers**"
           )
       ],
       components: [
         new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId("open_request").setLabel("🛒 Request").setStyle(ButtonStyle.Success),
-          new ButtonBuilder().setLabel("🆘 Support").setStyle(ButtonStyle.Link).setURL(BRAND.supportUrl)
+          new ButtonBuilder()
+            .setCustomId("open_request")
+            .setLabel("🛒 Request")
+            .setStyle(ButtonStyle.Success)
         )
       ]
     });
   }
 
-  /* ================= REQUEST BUTTON ================= */
+  /* ================= PRODUCT SELECT ================= */
   if (interaction.isButton() && interaction.customId === "open_request") {
     return interaction.reply({
-      embeds: [createEmbed().setTitle("🛒 Select Product")],
       components: [
         new ActionRowBuilder().addComponents(
           new StringSelectMenuBuilder()
             .setCustomId("select_product")
             .setPlaceholder("Choose product")
             .addOptions(
-              { label: "Minecraft Premium", value: "Minecraft Premium", emoji: "🎮" },
-              { label: "Crunchyroll Premium", value: "Crunchyroll Premium", emoji: "🍿" }
+              { label: "Minecraft Premium", value: "Minecraft Premium" }
             )
         )
       ],
@@ -129,159 +111,128 @@ client.on("interactionCreate", async interaction => {
     });
   }
 
-  /* ================= SELECT MENU ================= */
-  if (interaction.isStringSelectMenu() && interaction.customId === "select_product") {
-    const product = interaction.values[0];
+  /* ================= CREATE ORDER ================= */
+  if (interaction.isStringSelectMenu()) {
     const orderId = `ORD-${Date.now()}`;
 
     await Orders.create({
       orderId,
       userId: interaction.user.id,
-      product,
+      product: interaction.values[0],
       status: "pending"
     });
 
-    const adminChannel = client.channels.cache.get(config.adminChannelID);
-    if (adminChannel) {
-      adminChannel.send({
-        embeds: [
-          createEmbed()
-            .setTitle("🛒 New Order")
-            .addFields(
-              { name: "User", value: `<@${interaction.user.id}>`, inline: true },
-              { name: "Product", value: product, inline: true },
-              { name: "Order ID", value: orderId }
-            )
-        ],
-        components: [
-          new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId(`approve_${orderId}`).setLabel("Approve").setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId(`reject_${orderId}`).setLabel("Reject").setStyle(ButtonStyle.Danger)
-          )
-        ]
-      });
-    }
-
     return interaction.update({
-      embeds: [createEmbed().setTitle("✅ Order Submitted").setDescription("Waiting for approval ⏳")],
+      content: "✅ Order placed. Waiting for approval.",
       components: []
     });
   }
 
-  /* ================= ADD STOCK ================= */
-  if (interaction.isChatInputCommand() && interaction.commandName === "addstock") {
-    await interaction.deferReply({ ephemeral: true });
-
-    if (!interaction.member.roles.cache.has(config.adminRoleID))
-      return interaction.editReply("❌ Admin only");
-
-    await Stock.create({
-      product: interaction.options.getString("product"),
-      data: interaction.options.getString("data"),
-      used: false
-    });
-
-    return interaction.editReply({
-      embeds: [createEmbed().setTitle("✅ Stock Added")]
-    });
-  }
-
-  /* ================= AUTO IMPORT STOCK ================= */
-if (interaction.isChatInputCommand() && interaction.commandName === "importstock") {
-  await interaction.deferReply({ ephemeral: true });
-
-  if (!interaction.member.roles.cache.has(config.adminRoleID))
-    return interaction.editReply("❌ Admin only");
-
-  const product = interaction.options.getString("product");
-  const attachment = interaction.options.getAttachment("file");
-
-  if (!attachment.name.endsWith(".txt"))
-    return interaction.editReply("❌ Only .txt files allowed");
-
-  // Download file content
-  const buffer = await attachment.download();
-  const text = buffer.toString("utf-8");
-
-  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
-
-  if (!lines.length)
-    return interaction.editReply("❌ File is empty");
-
-  // Prepare bulk insert
-  const stocksToInsert = lines.map(line => ({ product, data: line, used: false }));
-
-  // Insert all at once
-  await Stock.insertMany(stocksToInsert);
-
-  return interaction.editReply({
-    embeds: [
-      createEmbed()
-        .setTitle("✅ Auto Restock Complete")
-        .setDescription(`📦 **Product:** ${product}\n📥 **Imported:** ${lines.length} stocks`)
-    ]
-  });
-    }
-
-  /* ================= STOCK COUNT ================= */
-  if (interaction.isChatInputCommand() && interaction.commandName === "stockcount") {
-    const stocks = await Stock.find({ used: false });
-    if (!stocks.length)
-      return interaction.reply({ content: "❌ No stock", ephemeral: true });
-
-    const map = {};
-    stocks.forEach(s => (map[s.product] = (map[s.product] || 0) + 1));
-
-    let desc = "";
-    for (const p in map) desc += `📦 **${p}** → ${map[p]}\n`;
-
-    return interaction.reply({
-      embeds: [createEmbed().setTitle("📊 Stock Count").setDescription(desc)],
-      ephemeral: true
-    });
-  }
-
-  /* ================= APPROVE / REJECT ================= */
-  if (interaction.isButton() && interaction.customId.includes("_")) {
-    if (!interaction.member.roles.cache.has(config.adminRoleID))
-      return interaction.reply({ content: "❌ Admin only", ephemeral: true });
-
-    const [action, orderId] = interaction.customId.split("_");
+  /* ================= APPROVE ORDER ================= */
+  if (interaction.isButton() && interaction.customId.startsWith("approve_")) {
+    const orderId = interaction.customId.split("_")[1];
     const order = await Orders.findOne({ orderId });
+    if (!order) return;
 
-    if (!order || order.status !== "pending")
-      return interaction.reply({ content: "❌ Already processed", ephemeral: true });
+    const stock = await Stock.findOne({ product: order.product, used: false });
+    if (!stock)
+      return interaction.reply({ content: "❌ No stock available", ephemeral: true });
 
-    if (action === "reject") {
-      order.status = "rejected";
-      await order.save();
-      return interaction.update({ content: "❌ Order rejected", components: [] });
-    }
+    stock.used = true;
+    await stock.save();
+    order.status = "completed";
+    await order.save();
 
-    if (action === "approve") {
-      const stock = await Stock.findOne({ product: order.product, used: false });
-      if (!stock)
-        return interaction.reply({ content: "❌ No stock", ephemeral: true });
+    const user = await client.users.fetch(order.userId);
 
-      stock.used = true;
-      await stock.save();
-      order.status = "completed";
-      await order.save();
+    await user.send({
+      embeds: [
+        createEmbed()
+          .setTitle("🎉 DELIVERY SUCCESSFUL")
+          .setDescription(
+            "Here is your product:\n\n" +
+            `||\`\`\`\n${stock.data}\n\`\`\`||`
+          )
+      ],
+      components: [
+        new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`leave_review_${orderId}`)
+            .setLabel("⭐ Leave a Review")
+            .setStyle(ButtonStyle.Primary)
+        )
+      ]
+    });
 
-      const user = await client.users.fetch(order.userId);
-      await user.send({
-        embeds: [
-          createEmbed()
-            .setTitle("🎉 DELIVERY SUCCESSFUL")
-            .setDescription(
-              `📦 **${order.product}**\n🆔 \`${order.orderId}\`\n\n` +
-              `||\`\`\`\n${stock.data}\n\`\`\`||`
-            )
-        ]
-      });
+    return interaction.update({ content: "✅ Delivered successfully", components: [] });
+  }
 
-      return interaction.update({ content: "✅ Delivered", components: [] });
-    }
+  /* ================= REVIEW BUTTON ================= */
+  if (interaction.isButton() && interaction.customId.startsWith("leave_review_")) {
+    const orderId = interaction.customId.split("_")[2];
+
+    const modal = new ModalBuilder()
+      .setCustomId(`review_modal_${orderId}`)
+      .setTitle("⭐ Leave a Review");
+
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId("rating")
+          .setLabel("Rating (1 to 5)")
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+      ),
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId("message")
+          .setLabel("Your Experience")
+          .setStyle(TextInputStyle.Paragraph)
+          .setRequired(true)
+      )
+    );
+
+    return interaction.showModal(modal);
+  }
+
+  /* ================= REVIEW SUBMIT ================= */
+  if (interaction.isModalSubmit() && interaction.customId.startsWith("review_modal_")) {
+    const orderId = interaction.customId.split("_")[2];
+
+    if (await Vouch.findOne({ orderId }))
+      return interaction.reply({ content: "❌ You already reviewed this order", ephemeral: true });
+
+    const rating = Math.min(5, Math.max(1, Number(interaction.fields.getTextInputValue("rating"))));
+    const message = interaction.fields.getTextInputValue("message");
+
+    await Vouch.create({
+      orderId,
+      userId: interaction.user.id,
+      rating,
+      message
+    });
+
+    const count = await Vouch.countDocuments();
+    const stars = animatedStars(rating);
+
+    const vouchChannel = client.channels.cache.get(config.vouchChannelID);
+
+    vouchChannel.send({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0x00ff99)
+          .setTitle("Thank you for another Review!")
+          .setDescription(
+            `${stars}\n\n` +
+            `**Vouch:** ${message}\n\n` +
+            `**Vouch No:** ${count}\n` +
+            `**Vouched by:** <@${interaction.user.id}>`
+          )
+          .setFooter({ text: `Service Provided by ${BRAND.name}` })
+      ]
+    });
+
+    return interaction.reply({ content: "✅ Review submitted successfully!", ephemeral: true });
   }
 });
 
