@@ -14,6 +14,7 @@ const {
 } = require("discord.js");
 
 const mongoose = require("mongoose");
+const fetch = require("node-fetch");
 const config = require("./config");
 const Stock = require("./models/Stock");
 const Orders = require("./models/Orders");
@@ -68,6 +69,7 @@ client.once("ready", async () => {
     i = (i + 1) % statuses.length;
   }, 8000);
 
+  // Register slash commands
   await client.application.commands.set([
     new SlashCommandBuilder().setName("panel").setDescription("Open store panel"),
     new SlashCommandBuilder().setName("request").setDescription("Request a product"),
@@ -172,45 +174,134 @@ client.on("interactionCreate", async interaction => {
     });
   }
 
-  /* ================= APPROVE ================= */
-  if (interaction.isButton() && interaction.customId.startsWith("approve_")) {
+  /* ================= ADD STOCK ================= */
+  if (interaction.isChatInputCommand() && interaction.commandName === "addstock") {
+    await interaction.deferReply({ ephemeral: true });
+
+    if (!interaction.member.roles.cache.has(config.adminRoleID))
+      return interaction.editReply("❌ Admin only");
+
+    await Stock.create({
+      product: interaction.options.getString("product"),
+      data: interaction.options.getString("data"),
+      used: false
+    });
+
+    return interaction.editReply({
+      embeds: [createEmbed().setTitle("✅ Stock Added")]
+    });
+  }
+
+  /* ================= IMPORT STOCK ================= */
+  if (interaction.isChatInputCommand() && interaction.commandName === "importstock") {
+    await interaction.deferReply({ ephemeral: true });
+
+    if (!interaction.member.roles.cache.has(config.adminRoleID))
+      return interaction.editReply("❌ Admin only");
+
+    const product = interaction.options.getString("product");
+    const attachment = interaction.options.getAttachment("file");
+
+    if (!attachment.name.endsWith(".txt"))
+      return interaction.editReply("❌ Only .txt files allowed");
+
+    const response = await fetch(attachment.url);
+    const text = await response.text();
+    const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+
+    for (const line of lines) {
+      await Stock.create({ product, data: line, used: false });
+    }
+
+    return interaction.editReply({
+      embeds: [
+        createEmbed()
+          .setTitle("✅ Auto Restock Complete")
+          .setDescription(`📦 **Product:** ${product}\n📥 **Imported:** ${lines.length} stocks`)
+      ]
+    });
+  }
+
+  /* ================= STOCK COUNT ================= */
+  if (interaction.isChatInputCommand() && interaction.commandName === "stockcount") {
+    const stocks = await Stock.find({ used: false });
+    if (!stocks.length)
+      return interaction.reply({ content: "❌ No stock", ephemeral: true });
+
+    const map = {};
+    stocks.forEach(s => (map[s.product] = (map[s.product] || 0) + 1));
+
+    let desc = "";
+    for (const p in map) desc += `📦 **${p}** → ${map[p]}\n`;
+
+    return interaction.reply({
+      embeds: [createEmbed().setTitle("📊 Stock Count").setDescription(desc)],
+      ephemeral: true
+    });
+  }
+
+  /* ================= MY ORDERS ================= */
+  if (interaction.isChatInputCommand() && interaction.commandName === "myorders") {
+    const orders = await Orders.find({ userId: interaction.user.id });
+    if (!orders.length)
+      return interaction.reply({ content: "❌ No orders found", ephemeral: true });
+
+    const desc = orders.map(o => `🆔 ${o.orderId} • ${o.product} • ${o.status}`).join("\n");
+
+    return interaction.reply({
+      embeds: [createEmbed().setTitle("🧾 Your Orders").setDescription(desc)],
+      ephemeral: true
+    });
+  }
+
+  /* ================= APPROVE / REJECT ================= */
+  if (interaction.isButton() && interaction.customId.includes("_")) {
     if (!interaction.member.roles.cache.has(config.adminRoleID))
       return interaction.reply({ content: "❌ Admin only", ephemeral: true });
 
-    const orderId = interaction.customId.split("_")[1];
+    const [action, orderId] = interaction.customId.split("_");
     const order = await Orders.findOne({ orderId });
-    if (!order) return;
 
-    const stock = await Stock.findOne({ product: order.product, used: false });
-    if (!stock) return interaction.reply({ content: "❌ No stock", ephemeral: true });
+    if (!order || order.status !== "pending")
+      return interaction.reply({ content: "❌ Already processed", ephemeral: true });
 
-    stock.used = true;
-    await stock.save();
-    order.status = "completed";
-    await order.save();
+    if (action === "reject") {
+      order.status = "rejected";
+      await order.save();
+      return interaction.update({ content: "❌ Order rejected", components: [] });
+    }
 
-    const user = await client.users.fetch(order.userId);
+    if (action === "approve") {
+      const stock = await Stock.findOne({ product: order.product, used: false });
+      if (!stock) return interaction.reply({ content: "❌ No stock", ephemeral: true });
 
-    await user.send({
-      embeds: [
-        createEmbed()
-          .setTitle("🎉 DELIVERY SUCCESSFUL")
-          .setDescription(
-            `📦 **${order.product}**\n🆔 \`${order.orderId}\`\n\n` +
-            `||\`\`\`\n${stock.data}\n\`\`\`||`
+      stock.used = true;
+      await stock.save();
+      order.status = "completed";
+      await order.save();
+
+      const user = await client.users.fetch(order.userId);
+      await user.send({
+        embeds: [
+          createEmbed()
+            .setTitle("🎉 DELIVERY SUCCESSFUL")
+            .setDescription(
+              `📦 **${order.product}**\n🆔 \`${order.orderId}\`\n\n` +
+              `||\`\`\`\n${stock.data}\n\`\`\`||`
+            )
+        ],
+        components: [
+          new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setCustomId(`vouch_${orderId}`)
+              .setLabel("⭐ Leave a Review")
+              .setStyle(ButtonStyle.Primary)
           )
-      ],
-      components: [
-        new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId(`vouch_${orderId}`)
-            .setLabel("⭐ Leave a Review")
-            .setStyle(ButtonStyle.Primary)
-        )
-      ]
-    });
+        ]
+      });
 
-    return interaction.update({ content: "✅ Delivered", components: [] });
+      return interaction.update({ content: "✅ Delivered", components: [] });
+    }
   }
 
   /* ================= VOUCH BUTTON ================= */
