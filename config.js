@@ -4,7 +4,8 @@ module.exports = {
   adminRoleID: process.env.ADMIN_ROLE_ID,
   adminChannelID: process.env.ADMIN_CHANNEL_ID,
   logChannelID: process.env.LOG_CHANNEL_ID,
-
+  vouchChannelID: process.env.VOUCH_CHANNEL_ID,
+  
   brand: {
     name: "MineCom Store",
     color: 0x00ff99,
