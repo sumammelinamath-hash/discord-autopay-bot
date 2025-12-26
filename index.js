@@ -14,7 +14,6 @@ const {
 } = require("discord.js");
 
 const mongoose = require("mongoose");
-const fetch = require("node-fetch");
 const config = require("./config");
 const Stock = require("./models/Stock");
 const Orders = require("./models/Orders");
