@@ -12,7 +12,6 @@ const {
   TextInputStyle,
   ActivityType
 } = require("discord.js");
-
 const mongoose = require("mongoose");
 const config = require("./config");
 const Stock = require("./models/Stock");
@@ -23,12 +22,16 @@ const Vouch = require("./models/Vouch");
 const BRAND = config.brand;
 const EMOJIS = { cart: "🛒", fire: "🔥", star: "⭐", support: "🆘" };
 
-const createEmbed = () =>
-  new EmbedBuilder()
+const createEmbed = (title, description) => {
+  const embed = new EmbedBuilder()
     .setColor(BRAND.color)
     .setAuthor({ name: `${BRAND.name} ${EMOJIS.fire}`, iconURL: BRAND.logo })
     .setFooter({ text: BRAND.footer, iconURL: BRAND.logo })
     .setTimestamp();
+  if (title) embed.setTitle(title);
+  if (description) embed.setDescription(description);
+  return embed;
+};
 
 /* ================= CLIENT ================= */
 const client = new Client({
@@ -70,18 +73,19 @@ client.once("ready", async () => {
     i = (i + 1) % statuses.length;
   }, 8000);
 
+  // Register Slash Commands
   await client.application.commands.set([
     new SlashCommandBuilder().setName("panel").setDescription("Open store panel"),
     new SlashCommandBuilder()
       .setName("addstock")
       .setDescription("Add stock (Admin)")
-      .addStringOption(o => o.setName("product").setRequired(true))
-      .addStringOption(o => o.setName("data").setRequired(true)),
+      .addStringOption(o => o.setName("product").setDescription("Product name").setRequired(true))
+      .addStringOption(o => o.setName("data").setDescription("Code / Account").setRequired(true)),
     new SlashCommandBuilder()
       .setName("importstock")
       .setDescription("Import stock via TXT (Admin)")
-      .addStringOption(o => o.setName("product").setRequired(true))
-      .addAttachmentOption(o => o.setName("file").setRequired(true)),
+      .addStringOption(o => o.setName("product").setDescription("Product name").setRequired(true))
+      .addAttachmentOption(o => o.setName("file").setDescription(".txt file").setRequired(true)),
     new SlashCommandBuilder().setName("stockcount").setDescription("View stock"),
     new SlashCommandBuilder().setName("myorders").setDescription("Your orders")
   ]);
@@ -90,17 +94,11 @@ client.once("ready", async () => {
 /* ================= INTERACTIONS ================= */
 client.on("interactionCreate", async interaction => {
   try {
-
-    /* ---------- SLASH: PANEL ---------- */
+    /* ---------- PANEL ---------- */
     if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
       return interaction.reply({
-        embeds: [createEmbed()
-          .setTitle(`${EMOJIS.cart} MineCom Premium Store`)
-          .setDescription(
-            "⚡ **Fast Auto Delivery**\n" +
-            "🔐 **Secure & Trusted**\n" +
-            "🆘 **24/7 Support**\n\nClick below 👇"
-          )],
+        embeds: [createEmbed(`${EMOJIS.cart} MineCom Premium Store`,
+          "⚡ **Fast Auto Delivery**\n🔐 **Secure & Trusted**\n🆘 **24/7 Support**\n\nClick below 👇")],
         components: [new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId("open_request").setLabel("🛒 Request").setStyle(ButtonStyle.Success),
           new ButtonBuilder().setLabel("🆘 Support").setStyle(ButtonStyle.Link).setURL(BRAND.supportUrl)
@@ -108,72 +106,63 @@ client.on("interactionCreate", async interaction => {
       });
     }
 
-    /* ---------- SLASH: ADD STOCK ---------- */
+    /* ---------- ADD STOCK ---------- */
     if (interaction.isChatInputCommand() && interaction.commandName === "addstock") {
       await interaction.deferReply({ ephemeral: true });
-
       if (!interaction.member.roles.cache.has(config.adminRoleID))
         return interaction.editReply("❌ Admin only");
 
-      await Stock.create({
-        product: interaction.options.getString("product"),
-        data: interaction.options.getString("data"),
-        used: false
-      });
+      const product = interaction.options.getString("product");
+      const data = interaction.options.getString("data");
 
+      if (!product || !data) return interaction.editReply("❌ Product or Data missing");
+
+      await Stock.create({ product, data, used: false });
       return interaction.editReply("✅ Stock added");
     }
 
-    /* ---------- SLASH: IMPORT STOCK ---------- */
+    /* ---------- IMPORT STOCK ---------- */
     if (interaction.isChatInputCommand() && interaction.commandName === "importstock") {
       await interaction.deferReply({ ephemeral: true });
-
       if (!interaction.member.roles.cache.has(config.adminRoleID))
         return interaction.editReply("❌ Admin only");
 
       const product = interaction.options.getString("product");
       const file = interaction.options.getAttachment("file");
-      if (!file.name.endsWith(".txt"))
-        return interaction.editReply("❌ Only .txt files allowed");
+      if (!file?.name.endsWith(".txt")) return interaction.editReply("❌ Only .txt files allowed");
 
       const text = await (await fetch(file.url)).text();
       const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
 
-      for (const line of lines)
-        await Stock.create({ product, data: line, used: false });
-
+      for (const line of lines) await Stock.create({ product, data: line, used: false });
       return interaction.editReply(`✅ Imported ${lines.length} stocks`);
     }
 
-    /* ---------- SLASH: STOCK COUNT ---------- */
+    /* ---------- STOCK COUNT ---------- */
     if (interaction.isChatInputCommand() && interaction.commandName === "stockcount") {
       const stocks = await Stock.find({ used: false });
-      if (!stocks.length)
-        return interaction.reply({ content: "❌ No stock", ephemeral: true });
+      if (!stocks.length) return interaction.reply({ content: "❌ No stock", ephemeral: true });
 
       const map = {};
       stocks.forEach(s => map[s.product] = (map[s.product] || 0) + 1);
+      const desc = Object.entries(map).map(([p, n]) => `📦 **${p}** → ${n}`).join("\n");
 
-      let desc = "";
-      for (const p in map) desc += `📦 **${p}** → ${map[p]}\n`;
-
-      return interaction.reply({ embeds: [createEmbed().setTitle("📊 Stock Count").setDescription(desc)], ephemeral: true });
+      return interaction.reply({ embeds: [createEmbed("📊 Stock Count", desc)], ephemeral: true });
     }
 
-    /* ---------- SLASH: MY ORDERS ---------- */
+    /* ---------- MY ORDERS ---------- */
     if (interaction.isChatInputCommand() && interaction.commandName === "myorders") {
       const orders = await Orders.find({ userId: interaction.user.id });
-      if (!orders.length)
-        return interaction.reply({ content: "❌ No orders", ephemeral: true });
+      if (!orders.length) return interaction.reply({ content: "❌ No orders", ephemeral: true });
 
       const desc = orders.map(o => `🆔 ${o.orderId} • ${o.product} • ${o.status}`).join("\n");
-      return interaction.reply({ embeds: [createEmbed().setTitle("🧾 Your Orders").setDescription(desc)], ephemeral: true });
+      return interaction.reply({ embeds: [createEmbed("🧾 Your Orders", desc)], ephemeral: true });
     }
 
     /* ---------- REQUEST BUTTON ---------- */
     if (interaction.isButton() && interaction.customId === "open_request") {
       return interaction.reply({
-        embeds: [createEmbed().setTitle("🛒 Select Product")],
+        embeds: [createEmbed("🛒 Select Product")],
         components: [new ActionRowBuilder().addComponents(
           new StringSelectMenuBuilder()
             .setCustomId("select_product")
@@ -191,22 +180,19 @@ client.on("interactionCreate", async interaction => {
     if (interaction.isStringSelectMenu() && interaction.customId === "select_product") {
       await interaction.deferUpdate();
 
+      const product = interaction.values[0];
+      if (!product) return;
+
       const orderId = `ORD-${Date.now()}`;
-      await Orders.create({
-        orderId,
-        userId: interaction.user.id,
-        product: interaction.values[0],
-        status: "pending"
-      });
+      await Orders.create({ orderId, userId: interaction.user.id, product, status: "pending" });
 
       const adminChannel = client.channels.cache.get(config.adminChannelID);
       adminChannel?.send({
-        embeds: [createEmbed().setTitle("🛒 New Order")
-          .addFields(
-            { name: "User", value: `<@${interaction.user.id}>`, inline: true },
-            { name: "Product", value: interaction.values[0], inline: true },
-            { name: "Order ID", value: orderId }
-          )],
+        embeds: [createEmbed("🛒 New Order").addFields(
+          { name: "User", value: `<@${interaction.user.id}>`, inline: true },
+          { name: "Product", value: product, inline: true },
+          { name: "Order ID", value: orderId }
+        )],
         components: [new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId(`approve_${orderId}`).setLabel("Approve").setStyle(ButtonStyle.Success),
           new ButtonBuilder().setCustomId(`reject_${orderId}`).setLabel("Reject").setStyle(ButtonStyle.Danger)
@@ -230,8 +216,7 @@ client.on("interactionCreate", async interaction => {
       }
 
       const stock = await Stock.findOne({ product: order.product, used: false });
-      if (!stock)
-        return interaction.editReply({ content: "❌ No stock", components: [] });
+      if (!stock) return interaction.editReply({ content: "❌ No stock", components: [] });
 
       stock.used = true;
       order.status = "completed";
@@ -239,13 +224,14 @@ client.on("interactionCreate", async interaction => {
       await order.save();
 
       const user = await client.users.fetch(order.userId).catch(() => null);
-      user?.send({
-        embeds: [createEmbed().setTitle("🎉 DELIVERY SUCCESSFUL")
-          .setDescription(`📦 **${order.product}**\n\n||\`\`\`\n${stock.data}\n\`\`\`||`)],
-        components: [new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId(`vouch_${orderId}`).setLabel("⭐ Leave a Review").setStyle(ButtonStyle.Primary)
-        )]
-      });
+      if (user) {
+        await user.send({
+          embeds: [createEmbed("🎉 DELIVERY SUCCESSFUL", `📦 **${order.product}**\n\n||\`\`\`\n${stock.data}\n\`\`\`||`)],
+          components: [new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`vouch_${orderId}`).setLabel("⭐ Leave a Review").setStyle(ButtonStyle.Primary)
+          )]
+        }).catch(() => {});
+      }
 
       return interaction.editReply({ content: "✅ Delivered", components: [] });
     }
@@ -257,10 +243,10 @@ client.on("interactionCreate", async interaction => {
         new ModalBuilder().setCustomId(`vouch_modal_${orderId}`).setTitle("⭐ Leave a Review")
           .addComponents(
             new ActionRowBuilder().addComponents(
-              new TextInputBuilder().setCustomId("rating").setLabel("Rating (1-5)").setStyle(TextInputStyle.Short)
+              new TextInputBuilder().setCustomId("rating").setLabel("Rating (1-5)").setStyle(TextInputStyle.Short).setRequired(true)
             ),
             new ActionRowBuilder().addComponents(
-              new TextInputBuilder().setCustomId("message").setLabel("Your Review").setStyle(TextInputStyle.Paragraph)
+              new TextInputBuilder().setCustomId("message").setLabel("Your Review").setStyle(TextInputStyle.Paragraph).setRequired(true)
             )
           )
       );
@@ -271,8 +257,7 @@ client.on("interactionCreate", async interaction => {
       await interaction.deferReply({ ephemeral: true });
 
       const orderId = interaction.customId.split("_")[2];
-      if (await Vouch.findOne({ orderId }))
-        return interaction.editReply("❌ Already reviewed");
+      if (await Vouch.findOne({ orderId })) return interaction.editReply("❌ Already reviewed");
 
       const rating = Number(interaction.fields.getTextInputValue("rating"));
       const message = interaction.fields.getTextInputValue("message");
@@ -280,8 +265,7 @@ client.on("interactionCreate", async interaction => {
       await Vouch.create({ orderId, userId: interaction.user.id, rating, message });
 
       client.channels.cache.get(config.vouchChannelID)?.send({
-        embeds: [createEmbed().setTitle("🌟 New Review")
-          .setDescription(`⭐`.repeat(Math.min(Math.max(rating,1),5)) + `\n\n${message}\n👤 <@${interaction.user.id}>`)]
+        embeds: [createEmbed("🌟 New Review", `⭐`.repeat(Math.min(Math.max(rating, 1), 5)) + `\n\n${message}\n👤 <@${interaction.user.id}>`)]
       });
 
       return interaction.editReply("✅ Thanks for your review!");
@@ -289,6 +273,11 @@ client.on("interactionCreate", async interaction => {
 
   } catch (err) {
     console.error("❌ Interaction Error:", err);
+    if (interaction.deferred || interaction.replied) {
+      return interaction.editReply("❌ An error occurred. Check bot logs.");
+    } else {
+      return interaction.reply({ content: "❌ An error occurred. Check bot logs.", ephemeral: true });
+    }
   }
 });
 
