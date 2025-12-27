@@ -20,7 +20,7 @@ const Vouch = require("./models/Vouch");
 
 /* ================= BRAND ================= */
 const BRAND = config.brand;
-const EMOJIS = { cart: "<a:AddToCart:1454454014467903593>", fire: "<a:fire20:1454459210463973442>", star: "<a:star_op:1454459667173478552>", support: ":sos:" };
+const EMOJIS = { cart: "🛒", fire: "🔥", star: "⭐", support: "🆘" };
 
 const createEmbed = (title, description) => {
   const embed = new EmbedBuilder()
@@ -96,10 +96,10 @@ client.on("interactionCreate", async interaction => {
   try {
     /* ---------- PANEL ---------- */
     if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
-  return interaction.reply({
+  await interaction.deferReply();
     embeds: [
       createEmbed()
-        .setTitle("<a:cartspin:1454454014467903553>MineCom Store")
+        .setTitle("MineCom Store")
         .setDescription(
           "<a:zapp:1454475841257078986>Fast Delivery\n"
           + "<a:locked:1454475798714126477>Secure & Trusted"
@@ -110,7 +110,7 @@ client.on("interactionCreate", async interaction => {
         new ButtonBuilder()
           .setCustomId("open_request")
           .setLabel("Request")
-          .setEmoji("1454454014467903553") // ✅ ONLY ID
+          .setEmoji({ id: "1454454014467903553" })
           .setStyle(ButtonStyle.Success),
 
         new ButtonBuilder()
