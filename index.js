@@ -100,7 +100,7 @@ client.on("interactionCreate", async interaction => {
         embeds: [createEmbed(`${EMOJIS.cart} MineCom Premium Store`,
           "⚡ **Fast Auto Delivery**\n🔐 **Secure & Trusted**\n🆘 **24/7 Support**\n\nClick below 👇")],
         components: [new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId("open_request").setLabel("<a:AddToCart:1454454014467903593> Request").setStyle(ButtonStyle.Success),
+          new ButtonBuilder().setCustomId("open_request").setLabel("Request").setStyle(ButtonStyle.Success).setEmoji("<a:addtocart:1454454014467903593>"),
           new ButtonBuilder().setLabel(":sos: Support").setStyle(ButtonStyle.Link).setURL(BRAND.supportUrl)
         )]
       });
