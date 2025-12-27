@@ -6,7 +6,7 @@ module.exports = {
   vouchChannelID: process.env.VOUCH_CHANNEL_ID,
   brand: {
     name: process.env.BRAND_NAME || "MineCom",
-    color: process.env.BRAND_COLOR || "0x2F3136",
+    color: process.env.BRAND_COLOR || "#A9A9A9",
     logo: process.env.BRAND_LOGO || "https://raw.githubusercontent.com/sumammelinamath-hash/MineCom/main/file_0000000063f87209a45937bc7fe7bdea.png",
     footer: process.env.BRAND_FOOTER || "💠 MineCom • Secure Auto Delivery",
     supportUrl: process.env.BRAND_SUPPORT_URL || "https://discord.gg/freemcfa"
