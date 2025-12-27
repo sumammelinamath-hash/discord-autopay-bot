@@ -114,7 +114,7 @@ client.on("interactionCreate", async interaction => {
         new ButtonBuilder()
           .setCustomId("open_request")
           .setLabel("Request")
-          .setEmoji({ id:"1454454014467903593", name:":addtocart:" }) // custom emoji ID only
+          .setEmoji({ id:"1454454014467903593", name:"addtocart" }) // custom emoji ID only
           .setStyle(ButtonStyle.Success),
 
         new ButtonBuilder()
