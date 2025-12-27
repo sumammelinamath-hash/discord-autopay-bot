@@ -20,7 +20,7 @@ const Vouch = require("./models/Vouch");
 
 /* ================= BRAND ================= */
 const BRAND = config.brand;
-const EMOJIS = { cart: "🛒", fire: "🔥", star: "⭐", support: "🆘" };
+const EMOJIS = { cart: ":AddToCart:", fire: ":fire:", star: ":star_op:", support: ":sos:" };
 
 const createEmbed = (title, description) => {
   const embed = new EmbedBuilder()
@@ -100,8 +100,8 @@ client.on("interactionCreate", async interaction => {
         embeds: [createEmbed(`${EMOJIS.cart} MineCom Premium Store`,
           "⚡ **Fast Auto Delivery**\n🔐 **Secure & Trusted**\n🆘 **24/7 Support**\n\nClick below 👇")],
         components: [new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId("open_request").setLabel("🛒 Request").setStyle(ButtonStyle.Success),
-          new ButtonBuilder().setLabel("🆘 Support").setStyle(ButtonStyle.Link).setURL(BRAND.supportUrl)
+          new ButtonBuilder().setCustomId("open_request").setLabel(":addtocart: Request").setStyle(ButtonStyle.Success),
+          new ButtonBuilder().setLabel(":sos: Support").setStyle(ButtonStyle.Link).setURL(BRAND.supportUrl)
         )]
       });
     }
@@ -168,13 +168,13 @@ client.on("interactionCreate", async interaction => {
             .setCustomId("select_product")
             .setPlaceholder("Choose product")
             .addOptions(
-  { label: "Minecraft Premium", value: "Minecraft Premium", emoji: "🎮" },
+  { label: "Minecraft Premium", value: "Minecraft Premium", emoji: ":console:" },
 
   { label: "Minecraft Donut Unban", value: "Minecraft Donut Unban", emoji: "🍩" },
   { label: "Minecraft Redeem Code (Method)", value: "Minecraft Redeem Code (Method)", emoji: "🧾" },
   { label: "Minecraft Premium (Own Pass)", value: "Minecraft Premium (Own Pass)", emoji: "🔐" },
 
-  { label: "Roblox $50 Gift Card (Method)", value: "Roblox $50 Gift Card (Method)", emoji: "🎁" },
+  { label: "Roblox $50 Gift Card (Method)", value: "Roblox $50 Gift Card (Method)", emoji: ":gift:" },
   { label: "Roblox $100 Gift Card (Method)", value: "Roblox $100 Gift Card (Method)", emoji: "💎" },
 
   { label: "Nitro Basic (Method)", value: "Nitro Basic (Method)", emoji: "⚡" },
