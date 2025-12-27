@@ -99,10 +99,10 @@ client.on("interactionCreate", async interaction => {
   return interaction.reply({
     embeds: [
       createEmbed()
-        .setTitle("<a:cartspin:1454454014467903553> MineCom Store")
+        .setTitle("<a:cartspin:1454454014467903553>MineCom Store")
         .setDescription(
-          "<a:zap:1454459210463973442> Fast Delivery\n" +
-          "<a:lockspin:1454459210463973442> Secure & Trusted"
+          "<a:zap:1454459210463973442>Fast Delivery\n" +
+          "<a:lockspin:1454459210463973442>Secure & Trusted"
         )
     ],
     components: [
