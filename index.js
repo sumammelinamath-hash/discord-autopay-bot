@@ -102,7 +102,7 @@ client.on("interactionCreate", async interaction => {
       createEmbed()
         .setTitle("MineCom Store")
         .setDescription(
-          "Fast Delivery\n"
+          "Fast Delivery\n" +
           "Secure & Trusted"
         )
     ],
