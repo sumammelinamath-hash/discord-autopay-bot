@@ -96,7 +96,7 @@ client.on("interactionCreate", async interaction => {
   try {
     /* ---------- PANEL ---------- */
     if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
-  await interaction.deferReply();
+  await interaction.deferReply({ ephemeral: true });
   await interaction.editReply({
     embeds: [
       createEmbed()
