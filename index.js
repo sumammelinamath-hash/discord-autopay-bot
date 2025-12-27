@@ -102,8 +102,8 @@ client.on("interactionCreate", async interaction => {
       createEmbed()
         .setTitle("MineCom Store")
         .setDescription(
-          "<a:zapp:1454475841257078986>Fast Delivery\n"
-          + "<a:locked:1454475798714126477>Secure & Trusted"
+          "Fast Delivery\n"
+          "Secure & Trusted"
         )
     ],
     components: [
