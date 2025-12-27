@@ -20,7 +20,7 @@ const Vouch = require("./models/Vouch");
 
 /* ================= BRAND ================= */
 const BRAND = config.brand;
-const EMOJIS = { cart: ":AddToCart:", fire: ":fire:", star: ":star_op:", support: ":sos:" };
+const EMOJIS = { cart: "<a:AddToCart:1454454014467903593>", fire: "<a:fire20:1454459210463973442>", star: "<a:star_op:1454459667173478552>", support: ":sos:" };
 
 const createEmbed = (title, description) => {
   const embed = new EmbedBuilder()
