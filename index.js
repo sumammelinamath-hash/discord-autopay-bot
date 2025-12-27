@@ -96,10 +96,8 @@ client.on("interactionCreate", async interaction => {
   try {
     /* ---------- PANEL ---------- */
     if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
-  // Defer the reply to prevent "application didn't respond"
   await interaction.deferReply({ ephemeral: true });
 
-  // Edit the deferred reply with embed and buttons
   await interaction.editReply({
     embeds: [
       createEmbed()
@@ -114,7 +112,6 @@ client.on("interactionCreate", async interaction => {
         new ButtonBuilder()
           .setCustomId("open_request")
           .setLabel("Request")
-          .setEmoji({ id:"1454454014467903593", name:"addtocart" }) // custom emoji ID only
           .setStyle(ButtonStyle.Success),
 
         new ButtonBuilder()
