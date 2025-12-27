@@ -168,9 +168,20 @@ client.on("interactionCreate", async interaction => {
             .setCustomId("select_product")
             .setPlaceholder("Choose product")
             .addOptions(
-              { label: "Minecraft Premium", value: "Minecraft Premium", emoji: "🎮" },
-              { label: "Crunchyroll Premium", value: "Crunchyroll Premium", emoji: "🍿" }
-            )
+  { label: "Minecraft Premium", value: "Minecraft Premium", emoji: "🎮" },
+
+  { label: "Minecraft Donut Unban", value: "Minecraft Donut Unban", emoji: "🍩" },
+  { label: "Minecraft Redeem Code (Method)", value: "Minecraft Redeem Code (Method)", emoji: "🧾" },
+  { label: "Minecraft Premium (Own Pass)", value: "Minecraft Premium (Own Pass)", emoji: "🔐" },
+
+  { label: "Roblox $50 Gift Card (Method)", value: "Roblox $50 Gift Card (Method)", emoji: "🎁" },
+  { label: "Roblox $100 Gift Card (Method)", value: "Roblox $100 Gift Card (Method)", emoji: "💎" },
+
+  { label: "Nitro Basic (Method)", value: "Nitro Basic (Method)", emoji: "⚡" },
+  { label: "Nitro Boost (Method)", value: "Nitro Boost (Method)", emoji: "🚀" },
+
+  { label: "MCFA (3 Months)", value: "MCFA (3 Months)", emoji: "🛡️" }
+)
         )],
         ephemeral: true
       });
