@@ -97,6 +97,7 @@ client.on("interactionCreate", async interaction => {
     /* ---------- PANEL ---------- */
     if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
   await interaction.deferReply();
+  await interaction.editReply({
     embeds: [
       createEmbed()
         .setTitle("MineCom Store")
