@@ -96,31 +96,14 @@ client.on("interactionCreate", async interaction => {
   try {
     /* ---------- PANEL ---------- */
     if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
-  await interaction.deferReply({ ephemeral: true });
-
-  await interaction.editReply({
-    embeds: [
-      createEmbed()
-        .setTitle("MineCom Store")
-        .setDescription(
-          "Fast Delivery ⚡\n" +
-          "Secure & Trusted 🔐"
-        )
-    ],
-    components: [
-      new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId("open_request")
-          .setLabel("Request")
-          .setStyle(ButtonStyle.Success),
-
-        new ButtonBuilder()
-          .setLabel("Support")
-          .setStyle(ButtonStyle.Link)
-          .setURL(BRAND.supportUrl)
-      )
-    ]
-  });
+      return interaction.reply({
+        embeds: [createEmbed(`${EMOJIS.cart} MineCom Premium Store`,
+          "âš¡ **Fast Auto Delivery**\nðŸ” **Secure & Trusted**\nðŸ†˜ **24/7 Support**\n\nClick below ðŸ‘‡")],
+        components: [new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId("open_request").setLabel("ðŸ›’ Request").setStyle(ButtonStyle.Success),
+          new ButtonBuilder().setLabel("ðŸ†˜ Support").setStyle(ButtonStyle.Link).setURL(BRAND.supportUrl)
+        )]
+      });
     }
 
     /* ---------- ADD STOCK ---------- */
