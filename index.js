@@ -98,7 +98,9 @@ client.on("interactionCreate", async interaction => {
     if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
       return interaction.reply({
         embeds: [createEmbed(`${EMOJIS.cart} MineCom Premium Store`,
-          "âš¡ **Fast Auto Delivery**\nðŸ” **Secure & Trusted**\nðŸ†˜ **24/7 Support**\n\nClick below ðŸ‘‡")],
+          "⚡ **Fast Auto Delivery**\n🔐 **Secure & Trusted**\n🆘 **24/7 Support**\n\nClick below 👇"
+      )
+    ],
         components: [new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId("open_request").setLabel("ðŸ›’ Request").setStyle(ButtonStyle.Success),
           new ButtonBuilder().setLabel("ðŸ†˜ Support").setStyle(ButtonStyle.Link).setURL(BRAND.supportUrl)
