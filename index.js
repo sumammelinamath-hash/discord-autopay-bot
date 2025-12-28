@@ -185,8 +185,8 @@ client.on("interactionCreate", async interaction => {
 
   { label: "MCFA (3 Months)", value: "MCFA (3 Months)", emoji: "🛡️" }
 )
-        )],
-        ephemeral: true
+        )
+      ]
       });
     }
 
