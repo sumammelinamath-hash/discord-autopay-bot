@@ -168,7 +168,7 @@ client.on("interactionCreate", async interaction => {
             .setCustomId("select_product")
             .setPlaceholder("Choose product")
             .addOptions(
-  { label: "Minecraft Premium", value: "Minecraft Premium", emoji: ":console:" },
+  { label: "Minecraft Premium", value: "Minecraft Premium", emoji: "🎮" },
 
   { label: "Minecraft Donut Unban", value: "Minecraft Donut Unban", emoji: "🍩" },
   { label: "Minecraft Redeem Code (Method)", value: "Minecraft Redeem Code (Method)", emoji: "🧾" },
