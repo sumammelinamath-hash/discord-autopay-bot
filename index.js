@@ -163,7 +163,8 @@ client.on("interactionCreate", async interaction => {
 
     /* ---------- REQUEST BUTTON ---------- */
     if (interaction.isButton() && interaction.customId === "open_request") {
-      return interaction.reply({
+      await interaction.deferReply({ ephemeral: true });
+      await interaction.editReply({
         embeds: [createEmbed("🛒 Select Product")],
         components: [new ActionRowBuilder().addComponents(
           new StringSelectMenuBuilder()
