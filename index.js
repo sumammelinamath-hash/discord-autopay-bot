@@ -97,7 +97,7 @@ client.on("interactionCreate", async interaction => {
     /* ---------- PANEL ---------- */
     if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
       return interaction.reply({
-        embeds: [createEmbed(`${EMOJIS.cart} MineCom Premium Store`,
+        embeds: [createEmbed().setTitle("<a:cart21:1454879646255681558> Mine Premium Store")
           "<a:zapp:1454474883449749626> **Fast Auto Delivery**\n" + "<a:locked20:1454475603754487819> **Secure & Trusted**\n" + "<a:sos20:1454450996653719643> **24/7 Support**\n"
       )
     ],
