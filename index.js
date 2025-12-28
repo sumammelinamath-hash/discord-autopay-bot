@@ -102,7 +102,7 @@ client.on("interactionCreate", async interaction => {
       )
     ],
         components: [new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId("open_request").setLabel("🛒 Request").setStyle(ButtonStyle.Success),
+          new ButtonBuilder().setCustomId("open_request").setLabel("Request").setEmoji({ id:"1454450202168524903"}).setStyle(ButtonStyle.Success),
           new ButtonBuilder().setLabel("🆘 Support").setStyle(ButtonStyle.Link).setURL(BRAND.supportUrl)
         )]
       });
