@@ -18,6 +18,18 @@ const Stock = require("./models/Stock");
 const Orders = require("./models/Orders");
 const Vouch = require("./models/Vouch");
 
+/* ================= CLIENT ================= */
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildInvites, // ✅ invite counter support
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.DirectMessages
+  ],
+  partials: ["CHANNEL"]
+});
+
 /* ================= BRAND ================= */
 const BRAND = config.brand;
 const EMOJIS = { cart: "🛒", fire: "🔥", star: "⭐", support: "🆘" };
