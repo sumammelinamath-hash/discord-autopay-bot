@@ -48,17 +48,6 @@ const createEmbed = (title, description) => {
   return embed;
 };
 
-/* ================= CLIENT ================= */
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.DirectMessages
-  ],
-  partials: ["CHANNEL"]
-});
-
 /* ================= MONGODB ================= */
 if (!config.mongoURI) {
   console.error("❌ MongoDB URI missing!");
@@ -83,6 +72,29 @@ client.once("ready", async () => {
       new Map(invites.map(inv => [inv.code, inv.uses]))
     );
   }
+  // ================= INVITE TRACKING =================
+client.on("guildMemberAdd", async (member) => {
+  try {
+    const cachedInvites = inviteCache.get(member.guild.id);
+    const newInvites = await member.guild.invites.fetch();
+
+    const usedInvite = newInvites.find(i => cachedInvites.get(i.code) < i.uses);
+
+    if (usedInvite) {
+      console.log(`${member.user.tag} joined using invite code: ${usedInvite.code} by ${usedInvite.inviter.tag}`);
+      // Here you can increment the inviter's counter in your DB
+      // e.g., incrementInviteCount(usedInvite.inviter.id);
+
+      // Update cache
+      inviteCache.set(
+        member.guild.id,
+        new Map(newInvites.map(inv => [inv.code, inv.uses]))
+      );
+    }
+  } catch (err) {
+    console.error("Invite tracking error:", err);
+  }
+});
   
   const statuses = [
     { name: "MineCom Store 🛒", type: ActivityType.Watching },
