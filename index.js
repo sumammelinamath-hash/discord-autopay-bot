@@ -30,6 +30,9 @@ const client = new Client({
   partials: ["CHANNEL"]
 });
 
+// 🔹 STEP-2: Invite Cache
+const inviteCache = new Map();
+
 /* ================= BRAND ================= */
 const BRAND = config.brand;
 const EMOJIS = { cart: "🛒", fire: "🔥", star: "⭐", support: "🆘" };
@@ -72,7 +75,15 @@ mongoose.connect(config.mongoURI)
 /* ================= READY ================= */
 client.once("ready", async () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
-
+// Fill invite cache for all guilds
+  for (const guild of client.guilds.cache.values()) {
+    const invites = await guild.invites.fetch();
+    inviteCache.set(
+      guild.id,
+      new Map(invites.map(inv => [inv.code, inv.uses]))
+    );
+  }
+  
   const statuses = [
     { name: "MineCom Store 🛒", type: ActivityType.Watching },
     { name: "Instant Delivery ⚡", type: ActivityType.Playing },
