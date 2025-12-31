@@ -73,6 +73,28 @@ client.once("ready", async () => {
       new Map(invites.map(inv => [inv.code, inv.uses]))
     );
   }
+});
+// 🔹 STEP-3: Listen for new members and update invite counts
+client.on("guildMemberAdd", async (member) => {
+  const cachedInvites = inviteCache.get(member.guild.id);
+  const newInvites = await member.guild.invites.fetch();
+
+  const usedInvite = newInvites.find(i => i.uses > (cachedInvites.get(i.code) || 0));
+
+  if (usedInvite) {
+    await Invites.findOneAndUpdate(
+      { userId: usedInvite.inviter.id, guildId: member.guild.id },
+      { $inc: { validInvites: 1, totalInvites: 1 } },
+      { upsert: true, new: true }
+    );
+  }
+
+  // Update the cache
+  inviteCache.set(
+    member.guild.id,
+    new Map(newInvites.map(i => [i.code, i.uses]))
+  );
+});
   // ================= INVITE TRACKING =================
 client.on("guildMemberAdd", async (member) => {
   try {
