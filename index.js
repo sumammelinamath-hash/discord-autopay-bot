@@ -74,51 +74,36 @@ client.once("ready", async () => {
     );
   }
 });
-// 🔹 STEP-3: Listen for new members and update invite counts
-client.on("guildMemberAdd", async (member) => {
-  const cachedInvites = inviteCache.get(member.guild.id);
-  const newInvites = await member.guild.invites.fetch();
-
-  const usedInvite = newInvites.find(i => i.uses > (cachedInvites.get(i.code) || 0));
-
-  if (usedInvite) {
-    await Invites.findOneAndUpdate(
-      { userId: usedInvite.inviter.id, guildId: member.guild.id },
-      { $inc: { validInvites: 1, totalInvites: 1 } },
-      { upsert: true, new: true }
-    );
-  }
-
-  // Update the cache
-  inviteCache.set(
-    member.guild.id,
-    new Map(newInvites.map(i => [i.code, i.uses]))
-  );
-});
-  // ================= INVITE TRACKING =================
+/* ================= INVITE TRACKING ================= */
 client.on("guildMemberAdd", async (member) => {
   try {
     const cachedInvites = inviteCache.get(member.guild.id);
     const newInvites = await member.guild.invites.fetch();
 
-    const usedInvite = newInvites.find(i => cachedInvites.get(i.code) < i.uses);
+    // Find the invite that was used
+    const usedInvite = newInvites.find(i => i.uses > (cachedInvites.get(i.code) || 0));
 
     if (usedInvite) {
       console.log(`${member.user.tag} joined using invite code: ${usedInvite.code} by ${usedInvite.inviter.tag}`);
-      // Here you can increment the inviter's counter in your DB
-      // e.g., incrementInviteCount(usedInvite.inviter.id);
 
-      // Update cache
-      inviteCache.set(
-        member.guild.id,
-        new Map(newInvites.map(inv => [inv.code, inv.uses]))
+      // Update MongoDB invite counts
+      await Invites.findOneAndUpdate(
+        { userId: usedInvite.inviter.id, guildId: member.guild.id },
+        { $inc: { validInvites: 1, totalInvites: 1 } },
+        { upsert: true, new: true }
       );
     }
+
+    // Update the cache
+    inviteCache.set(
+      member.guild.id,
+      new Map(newInvites.map(i => [i.code, i.uses]))
+    );
   } catch (err) {
     console.error("Invite tracking error:", err);
   }
 });
-  
+
   const statuses = [
     { name: "MineCom Store 🛒", type: ActivityType.Watching },
     { name: "Instant Delivery ⚡", type: ActivityType.Playing },
