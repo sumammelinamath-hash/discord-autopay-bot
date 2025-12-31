@@ -13,6 +13,7 @@ const {
   ActivityType
 } = require("discord.js");
 const mongoose = require("mongoose");
+const fetch = require("node-fetch");
 const config = require("./config");
 const Stock = require("./models/Stock");
 const Orders = require("./models/Orders");
@@ -24,14 +25,14 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildInvites, // ✅ invite counter support
+    GatewayIntentBits.GuildInvites,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.DirectMessages
   ],
   partials: ["CHANNEL"]
 });
 
-// 🔹 STEP-2: Invite Cache
+// 🔹 Invite Cache
 const inviteCache = new Map();
 
 /* ================= BRAND ================= */
@@ -65,7 +66,8 @@ mongoose.connect(config.mongoURI)
 /* ================= READY ================= */
 client.once("ready", async () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
-// Fill invite cache for all guilds
+
+  // Fill invite cache for all guilds
   for (const guild of client.guilds.cache.values()) {
     const invites = await guild.invites.fetch();
     inviteCache.set(
@@ -73,43 +75,13 @@ client.once("ready", async () => {
       new Map(invites.map(inv => [inv.code, inv.uses]))
     );
   }
-});
-/* ================= INVITE TRACKING ================= */
-client.on("guildMemberAdd", async (member) => {
-  try {
-    const cachedInvites = inviteCache.get(member.guild.id);
-    const newInvites = await member.guild.invites.fetch();
 
-    // Find the invite that was used
-    const usedInvite = newInvites.find(i => i.uses > (cachedInvites.get(i.code) || 0));
-
-    if (usedInvite) {
-      console.log(`${member.user.tag} joined using invite code: ${usedInvite.code} by ${usedInvite.inviter.tag}`);
-
-      // Update MongoDB invite counts
-      await Invites.findOneAndUpdate(
-        { userId: usedInvite.inviter.id, guildId: member.guild.id },
-        { $inc: { validInvites: 1, totalInvites: 1 } },
-        { upsert: true, new: true }
-      );
-    }
-
-    // Update the cache
-    inviteCache.set(
-      member.guild.id,
-      new Map(newInvites.map(i => [i.code, i.uses]))
-    );
-  } catch (err) {
-    console.error("Invite tracking error:", err);
-  }
-});
-
+  // Status rotation
   const statuses = [
     { name: "MineCom Store 🛒", type: ActivityType.Watching },
     { name: "Instant Delivery ⚡", type: ActivityType.Playing },
     { name: "Secure Orders 🔐", type: ActivityType.Watching }
   ];
-
   let i = 0;
   setInterval(() => {
     client.user.setActivity(statuses[i]);
@@ -134,17 +106,40 @@ client.on("guildMemberAdd", async (member) => {
   ]);
 });
 
+/* ================= INVITE TRACKING ================= */
+client.on("guildMemberAdd", async (member) => {
+  try {
+    const cachedInvites = inviteCache.get(member.guild.id);
+    const newInvites = await member.guild.invites.fetch();
+
+    const usedInvite = newInvites.find(i => i.uses > (cachedInvites.get(i.code) || 0));
+    if (usedInvite) {
+      console.log(`${member.user.tag} joined using invite code: ${usedInvite.code} by ${usedInvite.inviter.tag}`);
+      await Invites.findOneAndUpdate(
+        { userId: usedInvite.inviter.id, guildId: member.guild.id },
+        { $inc: { validInvites: 1, totalInvites: 1 } },
+        { upsert: true, new: true }
+      );
+    }
+
+    inviteCache.set(
+      member.guild.id,
+      new Map(newInvites.map(i => [i.code, i.uses]))
+    );
+  } catch (err) {
+    console.error("Invite tracking error:", err);
+  }
+});
+
 /* ================= INTERACTIONS ================= */
 client.on("interactionCreate", async interaction => {
   try {
-    /* ---------- PANEL ---------- */
+    // ---------- PANEL ----------
     if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
       return interaction.reply({
-        embeds: [createEmbed().setTitle("<a:cart21:1454879646255681558> Mine Premium Store")
-          .setDescription(
-          "<a:zapp:1454474883449749626> **Fast Auto Delivery**\n" + "<a:locked20:1454475603754487819> **Secure & Trusted**\n" + "<a:sos20:1454450996653719643> **24/7 Support**\n"
-      )
-    ],
+        embeds: [createEmbed("<a:cart21:1454879646255681558> Mine Premium Store",
+          "<a:zapp:1454474883449749626> **Fast Auto Delivery**\n<a:locked20:1454475603754487819> **Secure & Trusted**\n<a:sos20:1454450996653719643> **24/7 Support**\n"
+        )],
         components: [new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId("open_request").setLabel("Request").setEmoji({ id:"1454450202168524903"}).setStyle(ButtonStyle.Success),
           new ButtonBuilder().setLabel("Support").setEmoji({ id:"1454450996653719643"}).setStyle(ButtonStyle.Link).setURL(BRAND.supportUrl)
@@ -152,7 +147,7 @@ client.on("interactionCreate", async interaction => {
       });
     }
 
-    /* ---------- ADD STOCK ---------- */
+    // ---------- ADD STOCK ----------
     if (interaction.isChatInputCommand() && interaction.commandName === "addstock") {
       await interaction.deferReply({ ephemeral: true });
       if (!interaction.member.roles.cache.has(config.adminRoleID))
@@ -167,7 +162,7 @@ client.on("interactionCreate", async interaction => {
       return interaction.editReply("✅ Stock added");
     }
 
-    /* ---------- IMPORT STOCK ---------- */
+    // ---------- IMPORT STOCK ----------
     if (interaction.isChatInputCommand() && interaction.commandName === "importstock") {
       await interaction.deferReply({ ephemeral: true });
       if (!interaction.member.roles.cache.has(config.adminRoleID))
@@ -184,7 +179,7 @@ client.on("interactionCreate", async interaction => {
       return interaction.editReply(`✅ Imported ${lines.length} stocks`);
     }
 
-    /* ---------- STOCK COUNT ---------- */
+    // ---------- STOCK COUNT ----------
     if (interaction.isChatInputCommand() && interaction.commandName === "stockcount") {
       const stocks = await Stock.find({ used: false });
       if (!stocks.length) return interaction.reply({ content: "❌ No stock", ephemeral: true });
@@ -196,7 +191,7 @@ client.on("interactionCreate", async interaction => {
       return interaction.reply({ embeds: [createEmbed("📊 Stock Count", desc)], ephemeral: true });
     }
 
-    /* ---------- MY ORDERS ---------- */
+    // ---------- MY ORDERS ----------
     if (interaction.isChatInputCommand() && interaction.commandName === "myorders") {
       const orders = await Orders.find({ userId: interaction.user.id });
       if (!orders.length) return interaction.reply({ content: "❌ No orders", ephemeral: true });
@@ -205,54 +200,33 @@ client.on("interactionCreate", async interaction => {
       return interaction.reply({ embeds: [createEmbed("🧾 Your Orders", desc)], ephemeral: true });
     }
 
-    /* ---------- REQUEST BUTTON ---------- */
+    // ---------- REQUEST BUTTON ----------
     if (interaction.isButton() && interaction.customId === "open_request") {
-  await interaction.deferUpdate();
-      // -------------------- INVITE TRACKING --------------------
-  const guild = interaction.guild;
-  const member = interaction.member;
+      await interaction.deferUpdate();
 
-  // Fetch user's valid invites
-  const data = await Invites.findOne({ userId: member.id, guildId: guild.id });
-  const validInvites = data ? data.validInvites : 0;
-
-  // Optionally, increment inviter's invites (if you have inviter info)
-  // const inviter = ...; // get inviter from your logic
-  // await Invites.findOneAndUpdate(
-  //   { userId: inviter.id, guildId: guild.id },
-  //   { $inc: { validInvites: 1, totalInvites: 1 } },
-  //   { upsert: true, new: true }
-  // );
-
-  // -------------------- SHOW PRODUCT SELECT --------------------
-  await interaction.followUp({
-    ephemeral: true,
-    embeds: [
-      createEmbed()
-        .setTitle("🛒 Select Product")
-        .setDescription("Choose a product from the menu below 👇")
-    ],
-    components: [
-      new ActionRowBuilder().addComponents(
-        new StringSelectMenuBuilder()
-          .setCustomId("select_product")
-          .setPlaceholder("Choose product")
-          .addOptions(
-            { label: "Minecraft Premium", value: "Minecraft Premium", emoji: "🎮" },
-            { label: "Minecraft Donut Unban", value: "Minecraft Donut Unban", emoji: "🍩" },
-            { label: "Minecraft Redeem Code (Method)", value: "Minecraft Redeem Code (Method)", emoji: "🧾" },
-            { label: "Minecraft Premium (Own Pass)", value: "Minecraft Premium (Own Pass)", emoji: "🔐" },
-            { label: "Roblox $50 Gift Card (Method)", value: "Roblox $50 Gift Card (Method)", emoji: "🎁" },
-            { label: "Roblox $100 Gift Card (Method)", value: "Roblox $100 Gift Card (Method)", emoji: "💎" },
-            { label: "Nitro Basic (Method)", value: "Nitro Basic (Method)", emoji: "⚡" },
-            { label: "Nitro Boost (Method)", value: "Nitro Boost (Method)", emoji: "🚀" },
-            { label: "MCFA (3 Months)", value: "MCFA (3 Months)", emoji: "🛡️" }
-          )
-      )
-    ]
-  });
+      await interaction.followUp({
+        ephemeral: true,
+        embeds: [createEmbed("🛒 Select Product", "Choose a product from the menu below 👇")],
+        components: [new ActionRowBuilder().addComponents(
+          new StringSelectMenuBuilder()
+            .setCustomId("select_product")
+            .setPlaceholder("Choose product")
+            .addOptions(
+              { label: "Minecraft Premium", value: "Minecraft Premium", emoji: "🎮" },
+              { label: "Minecraft Donut Unban", value: "Minecraft Donut Unban", emoji: "🍩" },
+              { label: "Minecraft Redeem Code (Method)", value: "Minecraft Redeem Code (Method)", emoji: "🧾" },
+              { label: "Minecraft Premium (Own Pass)", value: "Minecraft Premium (Own Pass)", emoji: "🔐" },
+              { label: "Roblox $50 Gift Card (Method)", value: "Roblox $50 Gift Card (Method)", emoji: "🎁" },
+              { label: "Roblox $100 Gift Card (Method)", value: "Roblox $100 Gift Card (Method)", emoji: "💎" },
+              { label: "Nitro Basic (Method)", value: "Nitro Basic (Method)", emoji: "⚡" },
+              { label: "Nitro Boost (Method)", value: "Nitro Boost (Method)", emoji: "🚀" },
+              { label: "MCFA (3 Months)", value: "MCFA (3 Months)", emoji: "🛡️" }
+            )
+        )]
+      });
     }
-    /* ---------- SELECT PRODUCT ---------- */
+
+    // ---------- SELECT PRODUCT ----------
     if (interaction.isStringSelectMenu() && interaction.customId === "select_product") {
       await interaction.deferUpdate();
 
@@ -276,7 +250,7 @@ client.on("interactionCreate", async interaction => {
       });
     }
 
-    /* ---------- APPROVE / REJECT ---------- */
+    // ---------- APPROVE / REJECT ----------
     if (interaction.isButton() && (interaction.customId.startsWith("approve_") || interaction.customId.startsWith("reject_"))) {
       await interaction.deferUpdate();
       if (!interaction.member.roles.cache.has(config.adminRoleID)) return;
@@ -312,7 +286,7 @@ client.on("interactionCreate", async interaction => {
       return interaction.editReply({ content: "✅ Delivered", components: [] });
     }
 
-    /* ---------- VOUCH MODAL ---------- */
+    // ---------- VOUCH MODAL ----------
     if (interaction.isButton() && interaction.customId.startsWith("vouch_")) {
       const orderId = interaction.customId.split("_")[1];
       return interaction.showModal(
@@ -328,7 +302,7 @@ client.on("interactionCreate", async interaction => {
       );
     }
 
-    /* ---------- VOUCH SUBMIT ---------- */
+    // ---------- VOUCH SUBMIT ----------
     if (interaction.isModalSubmit() && interaction.customId.startsWith("vouch_modal_")) {
       await interaction.deferReply({ ephemeral: true });
 
