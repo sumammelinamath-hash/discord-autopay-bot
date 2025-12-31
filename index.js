@@ -201,6 +201,23 @@ client.on("interactionCreate", async interaction => {
     /* ---------- REQUEST BUTTON ---------- */
     if (interaction.isButton() && interaction.customId === "open_request") {
   await interaction.deferUpdate();
+      // -------------------- INVITE TRACKING --------------------
+  const guild = interaction.guild;
+  const member = interaction.member;
+
+  // Fetch user's valid invites
+  const data = await Invites.findOne({ userId: member.id, guildId: guild.id });
+  const validInvites = data ? data.validInvites : 0;
+
+  // Optionally, increment inviter's invites (if you have inviter info)
+  // const inviter = ...; // get inviter from your logic
+  // await Invites.findOneAndUpdate(
+  //   { userId: inviter.id, guildId: guild.id },
+  //   { $inc: { validInvites: 1, totalInvites: 1 } },
+  //   { upsert: true, new: true }
+  // );
+
+  // -------------------- SHOW PRODUCT SELECT --------------------
   await interaction.followUp({
     ephemeral: true,
     embeds: [
