@@ -17,6 +17,7 @@ const config = require("./config");
 const Stock = require("./models/Stock");
 const Orders = require("./models/Orders");
 const Vouch = require("./models/Vouch");
+const Invites = require("./models/Invite");
 
 /* ================= CLIENT ================= */
 const client = new Client({
