@@ -262,7 +262,7 @@ client.on("interactionCreate", async interaction => {
       if (action === "reject") {
         order.status = "rejected";
         await order.save();
-        return interaction.editReply({ content: "❌ Order rejected", components: [] });
+        return interaction.followUp({ content: "❌ Order rejected", components: [] });
       }
 
       const stock = await Stock.findOne({ product: order.product, used: false });
