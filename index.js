@@ -105,7 +105,8 @@ client.on("guildMemberAdd", async (member) => {
 
     await Invites.findOneAndUpdate(
       { userId: usedInvite.inviter.id, guildId: member.guild.id },
-      { $inc: { validInvites: 1, totalInvites: 1 } },
+      { $inc: { validInvites: 1, totalInvites: 1 },
+       $addToSet: { invitedMembers: member.id }},
       { upsert: true }
     );
 
@@ -115,6 +116,29 @@ client.on("guildMemberAdd", async (member) => {
 
   } catch (err) {
     console.error("Invite tracking error:", err);
+  }
+});
+    client.on("guildMemberRemove", async (member) => {
+  try {
+    const inviterData = await Invites.findOne({ 
+      guildId: member.guild.id,
+      invitedMembers: member.id // check who invited this leaving member
+    });
+
+    if (!inviterData) return; // member was not tracked
+
+    // Decrement validInvites
+    inviterData.validInvites = Math.max((inviterData.validInvites || 1) - 1, 0);
+
+    // Remove member from invitedMembers array
+    inviterData.invitedMembers = inviterData.invitedMembers.filter(id => id !== member.id);
+
+    await inviterData.save();
+
+    console.log(`Member left: ${member.user.tag}, decremented inviter ${inviterData.userId} invites`);
+
+  } catch (err) {
+    console.error("Invite leave tracking error:", err);
   }
 });
 
