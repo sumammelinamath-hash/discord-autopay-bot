@@ -267,7 +267,8 @@ client.on("interactionCreate", async interaction => {
         embeds: [createEmbed("🛒 New Order").addFields(
           { name: "User", value: `<@${interaction.user.id}>`, inline: true },
           { name: "Product", value: product, inline: true },
-          { name: "Order ID", value: orderId }
+          { name: "Order ID", value: orderId },
+          { name: "Invites", value: `${inviteCount}`, inline: true }
         )],
         components: [new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId(`approve_${orderId}`).setLabel("Approve").setStyle(ButtonStyle.Success),
