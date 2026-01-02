@@ -75,6 +75,47 @@ client.once("ready", async () => {
       new Map(invites.map(inv => [inv.code, inv.uses]))
     );
   }
+});
+
+/* ================= INVITE TRACKING ================= */
+client.on("guildMemberAdd", async (member) => {
+  try {
+    const cachedInvites = inviteCache.get(member.guild.id) || new Map();
+    const newInvites = await member.guild.invites.fetch();
+
+    let usedInvite = null;
+
+    for (const invite of newInvites.values()) {
+      const oldUses = cachedInvites.get(invite.code) || 0;
+      if (invite.uses > oldUses) {
+        usedInvite = invite;
+        break;
+      }
+    }
+
+    // Update cache
+    inviteCache.set(
+      member.guild.id,
+      new Map(newInvites.map(i => [i.code, i.uses]))
+    );
+
+    // Ignore vanity / unknown
+    if (!usedInvite || !usedInvite.inviter) return;
+
+    await Invites.findOneAndUpdate(
+      { userId: usedInvite.inviter.id, guildId: member.guild.id },
+      { $inc: { validInvites: 1, totalInvites: 1 } },
+      { upsert: true }
+    );
+
+    console.log(
+      `${member.user.tag} joined via ${usedInvite.code} by ${usedInvite.inviter.tag}`
+    );
+
+  } catch (err) {
+    console.error("Invite tracking error:", err);
+  }
+});
 
   // Status rotation
   const statuses = [
@@ -209,6 +250,15 @@ client.on("interactionCreate", async interaction => {
       if (!product) return;
 
       const orderId = `ORD-${Date.now()}`;
+
+      // ✅ Fetch invite data for this user
+  const inviteData = await Invites.findOne({
+    userId: interaction.user.id,
+    guildId: interaction.guild.id
+  });
+
+  const inviteCount = inviteData?.validInvites || 0;
+      
       await Orders.create({ orderId, userId: interaction.user.id, product, status: "pending" });
 
       const adminChannel = client.channels.cache.get(config.adminChannelID);
