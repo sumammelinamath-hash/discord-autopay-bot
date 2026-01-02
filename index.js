@@ -323,7 +323,7 @@ const fake = inviteData?.fakeMembers?.length || 0;
   { name: "Left ❌", value: `${left}`, inline: true },
   { name: "Fake 🚫", value: `${fake}`, inline: true }
 );
-        )],
+        
         components: [new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId(`approve_${orderId}`).setLabel("Approve").setStyle(ButtonStyle.Success),
           new ButtonBuilder().setCustomId(`reject_${orderId}`).setLabel("Reject").setStyle(ButtonStyle.Danger)
