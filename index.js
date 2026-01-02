@@ -103,6 +103,24 @@ client.on("guildMemberAdd", async (member) => {
     // Ignore vanity / unknown
     if (!usedInvite || !usedInvite.inviter) return;
 
+    const isFake = member.user.bot; // simple example
+    await Invites.findOneAndUpdate(
+      { userId: usedInvite.inviter.id, guildId: member.guild.id },
+      {
+        $inc: { totalInvites: 1, ...(isFake ? {} : { validInvites: 1 }) },
+        $addToSet: isFake
+          ? { fakeMembers: member.id }
+          : { invitedMembers: member.id }
+      },
+      { upsert: true }
+    );
+
+    console.log(`${member.user.tag} joined via ${usedInvite.code} by ${usedInvite.inviter.tag} ${isFake ? "(fake)" : ""}`);
+  } catch (err) {
+    console.error("Invite tracking error:", err);
+  }
+});
+
     await Invites.findOneAndUpdate(
       { userId: usedInvite.inviter.id, guildId: member.guild.id },
       { $inc: { validInvites: 1, totalInvites: 1 },
@@ -129,6 +147,8 @@ client.on("guildMemberAdd", async (member) => {
 
     // Decrement validInvites
     inviterData.validInvites = Math.max((inviterData.validInvites || 1) - 1, 0);
+   
+    inviterData.leftMembers.push(member.id);
 
     // Remove member from invitedMembers array
     inviterData.invitedMembers = inviterData.invitedMembers.filter(id => id !== member.id);
