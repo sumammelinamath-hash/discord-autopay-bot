@@ -67,15 +67,16 @@ mongoose.connect(config.mongoURI)
 client.once("ready", async () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
 
-  // Fill invite cache for all guilds
+ // 🔹 Fill invite cache for all guilds
   for (const guild of client.guilds.cache.values()) {
-    const invites = await guild.invites.fetch();
+    const invites = await guild.invites.fetch().catch(() => null);
+    if (!invites) continue;
+
     inviteCache.set(
       guild.id,
       new Map(invites.map(inv => [inv.code, inv.uses]))
     );
   }
-});
 
 /* ================= INVITE TRACKING ================= */
 client.on("guildMemberAdd", async (member) => {
