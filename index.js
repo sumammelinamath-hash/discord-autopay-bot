@@ -106,49 +106,6 @@ client.once("ready", async () => {
   ]);
 });
 
-/* ================= INVITE TRACKING ================= */
-client.on("guildMemberAdd", async (member) => {
-  try {
-    // Fetch cached invites or empty Map
-    const cachedInvites = inviteCache.get(member.guild.id) || new Map();
-
-    // Fetch current invites
-    const newInvites = await member.guild.invites.fetch().catch(() => new Map());
-
-    // Compare
-    let usedInvite;
-    for (const [code, invite] of newInvites) {
-      const oldUses = cachedInvites.get(code) || 0;
-      if (invite.uses > oldUses) {
-        usedInvite = invite;
-        break;
-      }
-    }
-
-    // Update cache
-    inviteCache.set(
-      member.guild.id,
-      new Map(newInvites.map(i => [i[0], i[1].uses]))
-    );
-
-    if (!usedInvite) return;
-
-    const inviterId = usedInvite.inviter?.id;
-    if (!inviterId) return; // inviter might be null for vanity URL
-
-    console.log(`${member.user.tag} joined using invite code: ${usedInvite.code} by ${usedInvite.inviter.tag}`);
-
-    await Invites.findOneAndUpdate(
-      { userId: inviterId, guildId: member.guild.id },
-      { $inc: { validInvites: 1, totalInvites: 1 } },
-      { upsert: true, new: true }
-    );
-
-  } catch (err) {
-    console.error("Invite tracking error:", err);
-  }
-});
-
 /* ================= INTERACTIONS ================= */
 client.on("interactionCreate", async interaction => {
   try {
