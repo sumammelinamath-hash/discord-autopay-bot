@@ -302,7 +302,14 @@ client.on("interactionCreate", async interaction => {
     guildId: interaction.guild.id
   });
 
-  const inviteCount = inviteData?.validInvites || 0;
+  const inviteData = await Invites.findOne({
+  userId: interaction.user.id,
+  guildId: interaction.guild.id
+});
+
+const valid = inviteData?.validInvites || 0;
+const left = inviteData?.leftMembers?.length || 0;
+const fake = inviteData?.fakeMembers?.length || 0;
       
       await Orders.create({ orderId, userId: interaction.user.id, product, status: "pending" });
 
@@ -312,7 +319,10 @@ client.on("interactionCreate", async interaction => {
           { name: "User", value: `<@${interaction.user.id}>`, inline: true },
           { name: "Product", value: product, inline: true },
           { name: "Order ID", value: orderId },
-          { name: "Invites", value: `${inviteCount}`, inline: true }
+          { name: "Invites ✅", value: `${valid}`, inline: true },
+  { name: "Left ❌", value: `${left}`, inline: true },
+  { name: "Fake 🚫", value: `${fake}`, inline: true }
+);
         )],
         components: [new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId(`approve_${orderId}`).setLabel("Approve").setStyle(ButtonStyle.Success),
