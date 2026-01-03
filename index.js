@@ -182,7 +182,27 @@ client.once("ready", async () => {
     new SlashCommandBuilder().setName("myorders").setDescription("Your orders"),
     new SlashCommandBuilder()
       .setName("resetinvites")
-      .setDescription("🔄 Reset all invite stats (Admin only)")
+      .setDescription("🔄 Reset all invite stats (Admin only)"),
+    const { SlashCommandBuilder } = require("discord.js");
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName("clearinvites")
+    .setDescription("Clear invites for all members or a specific user")
+    .addSubcommand(sub =>
+      sub.setName("all")
+        .setDescription("Clear invites for all members")
+    )
+    .addSubcommand(sub =>
+      sub.setName("user")
+        .setDescription("Clear invites for a specific member")
+        .addUserOption(option =>
+          option.setName("target")
+            .setDescription("Select a member")
+            .setRequired(true)
+        )
+    ),
+};
   ]);
 });
 
@@ -276,12 +296,77 @@ if (interaction.isChatInputCommand() && interaction.commandName === "resetinvite
         new Map(invites.map(inv => [inv.code, inv.uses]))
       );
     }
+    return interaction.reply({ content: "✅ All members' invites have been cleared!", ephemeral: true });
+  }
+
+  if (sub === "user") {
+    const user = interaction.options.getUser("target");
+    if (!user) return interaction.reply({ content: "❌ User not found", ephemeral: true });
+
+    await Invites.findOneAndUpdate(
+      { guildId: interaction.guild.id, userId: user.id },
+      {
+        validInvites: 0,
+        leftMembers: [],
+        fakeMembers: [],
+        invitedMembers: []
+      },
+      { upsert: true }
+    );
+
+    return interaction.reply({ content: `✅ Cleared invites for <@${user.id}>`, ephemeral: true });
+  }
+};
 
     return interaction.editReply("✅ All invite stats have been reset!");
   } catch (err) {
     console.error("Reset invites error:", err);
     return interaction.editReply("❌ Failed to reset invites. Check bot logs.");
   }
+
+  // ------- CLEAR INVITES ----------
+  const Invites = require("../models/Invite"); // adjust path if needed
+const config = require("../config");
+
+module.exports.execute = async (interaction) => {
+  // Only admin role can use
+  if (!interaction.member.roles.cache.has(config.adminRoleID))
+    return interaction.reply({ content: "❌ Admin only", ephemeral: true });
+
+  const sub = interaction.options.getSubcommand();
+
+  if (sub === "all") {
+    await Invites.updateMany(
+      { guildId: interaction.guild.id },
+      {
+        validInvites: 0,
+        leftMembers: [],
+        fakeMembers: [],
+        invitedMembers: []
+      }
+    );
+
+    return interaction.reply({ content: "✅ All members' invites have been cleared!", ephemeral: true });
+  }
+
+  if (sub === "user") {
+    const user = interaction.options.getUser("target");
+    if (!user) return interaction.reply({ content: "❌ User not found", ephemeral: true });
+
+    await Invites.findOneAndUpdate(
+      { guildId: interaction.guild.id, userId: user.id },
+      {
+        validInvites: 0,
+        leftMembers: [],
+        fakeMembers: [],
+        invitedMembers: []
+      },
+      { upsert: true }
+    );
+
+    return interaction.reply({ content: `✅ Cleared invites for <@${user.id}>`, ephemeral: true });
+  }
+};
 }
 
     // ---------- REQUEST BUTTON ----------
