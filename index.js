@@ -325,6 +325,10 @@ if (interaction.isChatInputCommand() && interaction.commandName === "resetinvite
   }
 
   // ------- CLEAR INVITES ----------
+  if (interaction.isChatInputCommand() && interaction.commandName === "clearinvites") {
+  const command = require("./commands/clearinvites");
+  await command.execute(interaction);
+  }
   const Invites = require("../models/Invite"); // adjust path if needed
 const config = require("../config");
 
