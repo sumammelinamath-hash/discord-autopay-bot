@@ -40,12 +40,11 @@ const inviteCache = new Map();
 
 /* ================= BRAND ================= */
 const BRAND = config.brand;
-const EMOJIS = { cart: "🛒", fire: "🔥", star: "⭐", support: "🆘" };
 
 const createEmbed = (title, description) => {
   const embed = new EmbedBuilder()
     .setColor(BRAND.color)
-    .setAuthor({ name: `${BRAND.name} ${EMOJIS.fire}`, iconURL: BRAND.logo })
+    .setAuthor({ name: `${BRAND.name} 🔥`, iconURL: BRAND.logo })
     .setFooter({ text: BRAND.footer, iconURL: BRAND.logo })
     .setTimestamp();
 
@@ -72,17 +71,7 @@ client.once("ready", async () => {
     inviteCache.set(guild.id, new Map(invites.map(i => [i.code, i.uses])));
   }
 
-  const statuses = [
-    { name: "MineCom Store 🛒", type: ActivityType.Watching },
-    { name: "Instant Delivery ⚡", type: ActivityType.Playing },
-    { name: "Secure Orders 🔐", type: ActivityType.Watching }
-  ];
-
-  let i = 0;
-  setInterval(() => {
-    client.user.setActivity(statuses[i]);
-    i = (i + 1) % statuses.length;
-  }, 8000);
+  client.user.setActivity("MineCom Store 🛒", { type: ActivityType.Watching });
 
   await client.application.commands.set([
     new SlashCommandBuilder().setName("panel").setDescription("Open store panel"),
@@ -109,9 +98,7 @@ client.once("ready", async () => {
       .setName("clearinvites")
       .setDescription("Clear invites of a user")
       .addUserOption(o =>
-        o.setName("target")
-          .setDescription("Select member")
-          .setRequired(true)
+        o.setName("target").setDescription("Select member").setRequired(true)
       )
   ]);
 });
@@ -121,23 +108,23 @@ client.on("guildMemberAdd", async member => {
   const cached = inviteCache.get(member.guild.id) || new Map();
   const invites = await member.guild.invites.fetch();
 
-  let used;
+  let usedInvite;
   for (const inv of invites.values()) {
     if ((cached.get(inv.code) || 0) < inv.uses) {
-      used = inv;
+      usedInvite = inv;
       break;
     }
   }
 
   inviteCache.set(member.guild.id, new Map(invites.map(i => [i.code, i.uses])));
-  if (!used || !used.inviter) return;
+  if (!usedInvite || !usedInvite.inviter) return;
 
   const update = member.user.bot
     ? { $addToSet: { fakeMembers: member.id } }
     : { $inc: { validInvites: 1 }, $addToSet: { invitedMembers: member.id } };
 
   await Invites.findOneAndUpdate(
-    { guildId: member.guild.id, userId: used.inviter.id },
+    { guildId: member.guild.id, userId: usedInvite.inviter.id },
     update,
     { upsert: true }
   );
@@ -171,6 +158,63 @@ client.on("interactionCreate", async interaction => {
       });
     }
 
+    /* ADD STOCK */
+    if (interaction.isChatInputCommand() && interaction.commandName === "addstock") {
+      if (!interaction.member.roles.cache.has(config.adminRoleID))
+        return interaction.reply({ content: "❌ Admin only", ephemeral: true });
+
+      const product = interaction.options.getString("product");
+      const data = interaction.options.getString("data");
+
+      await Stock.create({ product, data, used: false });
+      return interaction.reply({ content: "✅ Stock added", ephemeral: true });
+    }
+
+    /* IMPORT STOCK */
+    if (interaction.isChatInputCommand() && interaction.commandName === "importstock") {
+      if (!interaction.member.roles.cache.has(config.adminRoleID))
+        return interaction.reply({ content: "❌ Admin only", ephemeral: true });
+
+      const product = interaction.options.getString("product");
+      const file = interaction.options.getAttachment("file");
+      const text = await (await fetch(file.url)).text();
+
+      const lines = text.split("\n").filter(Boolean);
+      for (const line of lines) {
+        await Stock.create({ product, data: line, used: false });
+      }
+
+      return interaction.reply({ content: `✅ Imported ${lines.length} stock`, ephemeral: true });
+    }
+
+    /* STOCK COUNT */
+    if (interaction.isChatInputCommand() && interaction.commandName === "stockcount") {
+      const stocks = await Stock.find({ used: false });
+      const map = {};
+      stocks.forEach(s => map[s.product] = (map[s.product] || 0) + 1);
+
+      const desc = Object.entries(map)
+        .map(([p, n]) => `📦 **${p}** → ${n}`)
+        .join("\n");
+
+      return interaction.reply({ embeds: [createEmbed("📊 Stock Count", desc)], ephemeral: true });
+    }
+
+    /* MY ORDERS */
+    if (interaction.isChatInputCommand() && interaction.commandName === "myorders") {
+      const orders = await Orders.find({ userId: interaction.user.id });
+      if (!orders.length)
+        return interaction.reply({ content: "❌ No orders", ephemeral: true });
+
+      return interaction.reply({
+        embeds: [createEmbed(
+          "🧾 Your Orders",
+          orders.map(o => `🆔 ${o.orderId} • ${o.product} • ${o.status}`).join("\n")
+        )],
+        ephemeral: true
+      });
+    }
+
     /* CLEAR INVITES (USER) */
     if (interaction.isChatInputCommand() && interaction.commandName === "clearinvites") {
       if (!interaction.member.roles.cache.has(config.adminRoleID))
@@ -196,7 +240,7 @@ client.on("interactionCreate", async interaction => {
     }
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ Interaction error:", err);
   }
 });
 
