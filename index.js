@@ -168,7 +168,7 @@ await Invites.findOneAndUpdate(
 
   } catch (err) {
     console.error("Invite leave tracking error:", err);
-  }
+  } 
 });
 
   // Register Slash Commands
