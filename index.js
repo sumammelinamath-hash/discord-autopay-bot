@@ -399,6 +399,17 @@ client.on("interactionCreate", async interaction => {
     const message = interaction.fields.getTextInputValue("message");
 
     await Vouch.create({ orderId, userId: interaction.user.id, rating, message });
+      const vouchChannel = await client.channels.fetch(config.vouchChannelID).catch(() => null);
+  if (vouchChannel?.isTextBased()) {
+    await vouchChannel.send({
+      embeds: [
+        createEmbed(
+          "🌟 New Review",
+          "⭐".repeat(Math.min(Math.max(rating, 1), 5)) +
+          `\n\n${message}\n👤 <@${interaction.user.id}>`
+        )
+      ]
+    });
     return interaction.editReply("✅ Thank you! Your review has been submitted.");
     }
 
