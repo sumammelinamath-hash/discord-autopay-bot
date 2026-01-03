@@ -179,7 +179,10 @@ client.once("ready", async () => {
       .addStringOption(o => o.setName("product").setDescription("Product name").setRequired(true))
       .addAttachmentOption(o => o.setName("file").setDescription(".txt file").setRequired(true)),
     new SlashCommandBuilder().setName("stockcount").setDescription("View stock"),
-    new SlashCommandBuilder().setName("myorders").setDescription("Your orders")
+    new SlashCommandBuilder().setName("myorders").setDescription("Your orders"),
+    new SlashCommandBuilder()
+      .setName("resetinvites")
+      .setDescription("🔄 Reset all invite stats (Admin only)")
   ]);
 });
 
