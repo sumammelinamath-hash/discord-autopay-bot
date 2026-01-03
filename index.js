@@ -276,6 +276,128 @@ client.on("interactionCreate", async interaction => {
       return interaction.editReply(`✅ Cleared invites for <@${user.id}>`);
     }
 
+    
+    /* ---------- REQUEST BUTTON ---------- */
+    if (interaction.isButton() && interaction.customId === "open_request") {
+      return interaction.reply({
+        embeds: [createEmbed("ðŸ›’ Select Product")],
+        components: [new ActionRowBuilder().addComponents(
+          new StringSelectMenuBuilder()
+            .setCustomId("select_product")
+            .setPlaceholder("Choose product")
+            .addOptions(
+              { label: "Minecraft Premium", value: "Minecraft Premium", emoji: "ðŸŽ®" },
+              { label: "Crunchyroll Premium", value: "Crunchyroll Premium", emoji: "ðŸ¿" }
+            )
+        )],
+        ephemeral: true
+      });
+    }
+
+    /* ---------- SELECT PRODUCT ---------- */
+    if (interaction.isStringSelectMenu() && interaction.customId === "select_product") {
+      await interaction.deferUpdate();
+
+      const product = interaction.values[0];
+      if (!product) return;
+
+      const orderId = `ORD-${Date.now()}`;
+      await Orders.create({ orderId, userId: interaction.user.id, product, status: "pending" });
+
+      const adminChannel = client.channels.cache.get(config.adminChannelID);
+      adminChannel?.send({
+        embeds: [createEmbed("ðŸ›’ New Order").addFields(
+          { name: "User", value: `<@${interaction.user.id}>`, inline: true },
+          { name: "Product", value: product, inline: true },
+          { name: "Order ID", value: orderId }
+        )],
+        components: [new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId(`approve_${orderId}`).setLabel("Approve").setStyle(ButtonStyle.Success),
+          new ButtonBuilder().setCustomId(`reject_${orderId}`).setLabel("Reject").setStyle(ButtonStyle.Danger)
+        )]
+      });
+    }
+
+    /* ---------- APPROVE / REJECT ---------- */
+    if (interaction.isButton() && (interaction.customId.startsWith("approve_") || interaction.customId.startsWith("reject_"))) {
+      await interaction.deferUpdate();
+      if (!interaction.member.roles.cache.has(config.adminRoleID)) return;
+
+      const [action, orderId] = interaction.customId.split("_");
+      const order = await Orders.findOne({ orderId });
+      if (!order || order.status !== "pending") return;
+
+      if (action === "reject") {
+        order.status = "rejected";
+        await order.save();
+        return interaction.editReply({ content: "âŒ Order rejected", components: [] });
+      }
+
+      const stock = await Stock.findOne({ product: order.product, used: false });
+      if (!stock) return interaction.editReply({ content: "âŒ No stock", components: [] });
+
+      stock.used = true;
+      order.status = "completed";
+      await stock.save();
+      await order.save();
+
+      const user = await client.users.fetch(order.userId).catch(() => null);
+      if (user) {
+        await user.send({
+          embeds: [createEmbed("ðŸŽ‰ DELIVERY SUCCESSFUL", `ðŸ“¦ **${order.product}**\n\n||\`\`\`\n${stock.data}\n\`\`\`||`)],
+          components: [new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`vouch_${orderId}`).setLabel("â­ Leave a Review").setStyle(ButtonStyle.Primary)
+          )]
+        }).catch(() => {});
+      }
+
+      return interaction.editReply({ content: "âœ… Delivered", components: [] });
+    }
+
+    /* ---------- VOUCH MODAL ---------- */
+    if (interaction.isButton() && interaction.customId.startsWith("vouch_")) {
+      const orderId = interaction.customId.split("_")[1];
+      return interaction.showModal(
+        new ModalBuilder().setCustomId(`vouch_modal_${orderId}`).setTitle("â­ Leave a Review")
+          .addComponents(
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder().setCustomId("rating").setLabel("Rating (1-5)").setStyle(TextInputStyle.Short).setRequired(true)
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder().setCustomId("message").setLabel("Your Review").setStyle(TextInputStyle.Paragraph).setRequired(true)
+            )
+          )
+      );
+    }
+
+    /* ---------- VOUCH SUBMIT ---------- */
+    if (interaction.isModalSubmit() && interaction.customId.startsWith("vouch_modal_")) {
+      await interaction.deferReply({ ephemeral: true });
+
+      const orderId = interaction.customId.split("_")[2];
+      if (await Vouch.findOne({ orderId })) return interaction.editReply("âŒ Already reviewed");
+
+      const rating = Number(interaction.fields.getTextInputValue("rating"));
+      const message = interaction.fields.getTextInputValue("message");
+
+      await Vouch.create({ orderId, userId: interaction.user.id, rating, message });
+
+      client.channels.cache.get(config.vouchChannelID)?.send({
+        embeds: [createEmbed("ðŸŒŸ New Review", `â­`.repeat(Math.min(Math.max(rating, 1), 5)) + `\n\n${message}\nðŸ‘¤ <@${interaction.user.id}>`)]
+      });
+
+      return interaction.editReply("âœ… Thanks for your review!");
+    }
+
+  } catch (err) {
+    console.error("âŒ Interaction Error:", err);
+    if (interaction.deferred || interaction.replied) {
+      return interaction.editReply("âŒ An error occurred. Check bot logs.");
+    } else {
+      return interaction.reply({ content: "âŒ An error occurred. Check bot logs.", ephemeral: true });
+    }
+                                                           }
+
     /* RESET INVITES */
     if (interaction.isChatInputCommand() && interaction.commandName === "resetinvites") {
       await interaction.deferReply({ ephemeral: true });
