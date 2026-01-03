@@ -121,13 +121,6 @@ client.on("guildMemberAdd", async (member) => {
   }
 });
 
-    await Invites.findOneAndUpdate(
-      { userId: usedInvite.inviter.id, guildId: member.guild.id },
-      { $inc: { validInvites: 1, totalInvites: 1 },
-       $addToSet: { invitedMembers: member.id }},
-      { upsert: true }
-    );
-
     console.log(
       `${member.user.tag} joined via ${usedInvite.code} by ${usedInvite.inviter.tag}`
     );
@@ -302,10 +295,6 @@ client.on("interactionCreate", async interaction => {
     guildId: interaction.guild.id
   });
 
-  const inviteData = await Invites.findOne({
-  userId: interaction.user.id,
-  guildId: interaction.guild.id
-});
 
 const valid = inviteData?.validInvites || 0;
 const left = inviteData?.leftMembers?.length || 0;
