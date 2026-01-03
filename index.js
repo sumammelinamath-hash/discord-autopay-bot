@@ -115,12 +115,6 @@ client.on("guildMemberAdd", async (member) => {
       { upsert: true }
     );
 
-    console.log(`${member.user.tag} joined via ${usedInvite.code} by ${usedInvite.inviter.tag} ${isFake ? "(fake)" : ""}`);
-  } catch (err) {
-    console.error("Invite tracking error:", err);
-  }
-});
-
     console.log(
       `${member.user.tag} joined via ${usedInvite.code} by ${usedInvite.inviter.tag}`
     );
@@ -140,7 +134,8 @@ client.on("guildMemberAdd", async (member) => {
 
     // Decrement validInvites
     inviterData.validInvites = Math.max((inviterData.validInvites || 1) - 1, 0);
-   
+
+    inviterData.leftMembers ??= [];
     inviterData.leftMembers.push(member.id);
 
     // Remove member from invitedMembers array
