@@ -68,7 +68,7 @@ mongoose.connect(config.mongoURI)
 client.once("ready", async () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
 
- // 🔹 Fill invite cache for all guilds
+  // 🔹 Fill invite cache for all guilds
   for (const guild of client.guilds.cache.values()) {
     const invites = await guild.invites.fetch().catch(() => null);
     if (!invites) continue;
@@ -78,6 +78,7 @@ client.once("ready", async () => {
       new Map(invites.map(inv => [inv.code, inv.uses]))
     );
   }
+
   // Status rotation
   const statuses = [
     { name: "MineCom Store 🛒", type: ActivityType.Watching },
@@ -98,7 +99,6 @@ client.on("guildMemberAdd", async (member) => {
     const newInvites = await member.guild.invites.fetch();
 
     let usedInvite = null;
-
     for (const invite of newInvites.values()) {
       const oldUses = cachedInvites.get(invite.code) || 0;
       if (invite.uses > oldUses) {
@@ -117,61 +117,55 @@ client.on("guildMemberAdd", async (member) => {
     if (!usedInvite || !usedInvite.inviter) return;
 
     const isFake = member.user.bot; // bots = fake
+    const update = { $inc: { totalInvites: 1 } };
 
-const update = {
-  $inc: { totalInvites: 1 }
-};
+    if (isFake) {
+      update.$addToSet = { fakeMembers: member.id };
+    } else {
+      update.$inc.validInvites = 1;
+      update.$addToSet = { invitedMembers: member.id };
+    }
 
-if (isFake) {
-  update.$addToSet = { fakeMembers: member.id };
-} else {
-  update.$inc.validInvites = 1;
-  update.$addToSet = { invitedMembers: member.id };
-}
-
-await Invites.findOneAndUpdate(
-  { userId: usedInvite.inviter.id, guildId: member.guild.id },
-  update,
-  { upsert: true }
-);
-
-    console.log(
-      `${member.user.tag} joined via ${usedInvite.code} by ${usedInvite.inviter.tag}`
+    await Invites.findOneAndUpdate(
+      { userId: usedInvite.inviter.id, guildId: member.guild.id },
+      update,
+      { upsert: true }
     );
 
+    console.log(`${member.user.tag} joined via ${usedInvite.code} by ${usedInvite.inviter.tag}`);
   } catch (err) {
     console.error("Invite tracking error:", err);
   }
 });
-    client.on("guildMemberRemove", async (member) => {
+
+client.on("guildMemberRemove", async (member) => {
   try {
     const inviterData = await Invites.findOne({ 
       guildId: member.guild.id,
-      invitedMembers: member.id // check who invited this leaving member
+      invitedMembers: member.id
     });
 
-    if (!inviterData) return; // member was not tracked
+    if (!inviterData) return;
 
-    // Decrement validInvites
     inviterData.validInvites = Math.max((inviterData.validInvites || 1) - 1, 0);
 
     inviterData.leftMembers ??= [];
     if (!inviterData.leftMembers.includes(member.id)) {
-    inviterData.leftMembers.push(member.id);
+      inviterData.leftMembers.push(member.id);
+    }
 
-    // Remove member from invitedMembers array
     inviterData.invitedMembers = inviterData.invitedMembers.filter(id => id !== member.id);
 
     await inviterData.save();
 
     console.log(`Member left: ${member.user.tag}, decremented inviter ${inviterData.userId} invites`);
-
   } catch (err) {
     console.error("Invite leave tracking error:", err);
-  } 
+  }
 });
 
-  // Register Slash Commands
+/* ================= SLASH COMMANDS ================= */
+client.once("ready", async () => {
   await client.application.commands.set([
     new SlashCommandBuilder().setName("panel").setDescription("Open store panel"),
     new SlashCommandBuilder()
@@ -195,7 +189,7 @@ client.on("interactionCreate", async interaction => {
     // ---------- PANEL ----------
     if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
       await interaction.deferReply();
-  return interaction.editReply({
+      return interaction.editReply({
         embeds: [createEmbed("<a:cart21:1454879646255681558> Mine Premium Store",
           "<a:zapp:1454474883449749626> **Fast Auto Delivery**\n<a:locked20:1454475603754487819> **Secure & Trusted**\n<a:sos20:1454450996653719643> **24/7 Support**\n"
         )],
@@ -262,7 +256,6 @@ client.on("interactionCreate", async interaction => {
     // ---------- REQUEST BUTTON ----------
     if (interaction.isButton() && interaction.customId === "open_request") {
       await interaction.deferUpdate();
-
       await interaction.followUp({
         ephemeral: true,
         embeds: [createEmbed("🛒 Select Product", "Choose a product from the menu below 👇")],
@@ -288,23 +281,19 @@ client.on("interactionCreate", async interaction => {
     // ---------- SELECT PRODUCT ----------
     if (interaction.isStringSelectMenu() && interaction.customId === "select_product") {
       await interaction.deferUpdate();
-
       const product = interaction.values[0];
       if (!product) return;
 
       const orderId = `ORD-${Date.now()}`;
+      const inviteData = await Invites.findOne({
+        userId: interaction.user.id,
+        guildId: interaction.guild.id
+      });
 
-      // ✅ Fetch invite data for this user
-  const inviteData = await Invites.findOne({
-    userId: interaction.user.id,
-    guildId: interaction.guild.id
-  });
+      const valid = inviteData?.validInvites || 0;
+      const left = inviteData?.leftMembers?.length || 0;
+      const fake = inviteData?.fakeMembers?.length || 0;
 
-
-const valid = inviteData?.validInvites || 0;
-const left = inviteData?.leftMembers?.length || 0;
-const fake = inviteData?.fakeMembers?.length || 0;
-      
       await Orders.create({ orderId, userId: interaction.user.id, product, status: "pending" });
 
       const adminChannel = client.channels.cache.get(config.adminChannelID);
@@ -314,11 +303,9 @@ const fake = inviteData?.fakeMembers?.length || 0;
           { name: "Product", value: product, inline: true },
           { name: "Order ID", value: orderId },
           { name: "Invites ✅", value: `${valid}`, inline: true },
-  { name: "Left ❌", value: `${left}`, inline: true },
-  { name: "Fake 🚫", value: `${fake}`, inline: true }
-)
-],
-        
+          { name: "Left ❌", value: `${left}`, inline: true },
+          { name: "Fake 🚫", value: `${fake}`, inline: true }
+        )],
         components: [new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId(`approve_${orderId}`).setLabel("Approve").setStyle(ButtonStyle.Success),
           new ButtonBuilder().setCustomId(`reject_${orderId}`).setLabel("Reject").setStyle(ButtonStyle.Danger)
