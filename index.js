@@ -256,6 +256,34 @@ client.on("interactionCreate", async interaction => {
       return interaction.reply({ embeds: [createEmbed("🧾 Your Orders", desc)], ephemeral: true });
     }
 
+    // ---------- RESET INVITES ----------
+if (interaction.isChatInputCommand() && interaction.commandName === "resetinvites") {
+  await interaction.deferReply({ ephemeral: true });
+
+  // Only admins can use
+  if (!interaction.member.roles.cache.has(config.adminRoleID))
+    return interaction.editReply("❌ Admin only");
+
+  try {
+    // Reset all invite data for the guild
+    await Invites.deleteMany({ guildId: interaction.guild.id });
+
+    // Reset invite cache
+    const invites = await interaction.guild.invites.fetch().catch(() => null);
+    if (invites) {
+      inviteCache.set(
+        interaction.guild.id,
+        new Map(invites.map(inv => [inv.code, inv.uses]))
+      );
+    }
+
+    return interaction.editReply("✅ All invite stats have been reset!");
+  } catch (err) {
+    console.error("Reset invites error:", err);
+    return interaction.editReply("❌ Failed to reset invites. Check bot logs.");
+  }
+}
+
     // ---------- REQUEST BUTTON ----------
     if (interaction.isButton() && interaction.customId === "open_request") {
       await interaction.deferUpdate();
