@@ -77,7 +77,19 @@ client.once("ready", async () => {
       guild.id,
       new Map(invites.map(inv => [inv.code, inv.uses]))
     );
-  });
+  }
+  // Status rotation
+  const statuses = [
+    { name: "MineCom Store 🛒", type: ActivityType.Watching },
+    { name: "Instant Delivery ⚡", type: ActivityType.Playing },
+    { name: "Secure Orders 🔐", type: ActivityType.Watching }
+  ];
+  let i = 0;
+  setInterval(() => {
+    client.user.setActivity(statuses[i]);
+    i = (i + 1) % statuses.length;
+  }, 8000);
+});
 
 /* ================= INVITE TRACKING ================= */
 client.on("guildMemberAdd", async (member) => {
@@ -158,18 +170,6 @@ await Invites.findOneAndUpdate(
     console.error("Invite leave tracking error:", err);
   }
 });
-
-  // Status rotation
-  const statuses = [
-    { name: "MineCom Store 🛒", type: ActivityType.Watching },
-    { name: "Instant Delivery ⚡", type: ActivityType.Playing },
-    { name: "Secure Orders 🔐", type: ActivityType.Watching }
-  ];
-  let i = 0;
-  setInterval(() => {
-    client.user.setActivity(statuses[i]);
-    i = (i + 1) % statuses.length;
-  }, 8000);
 
   // Register Slash Commands
   await client.application.commands.set([
