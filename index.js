@@ -76,7 +76,7 @@ client.once("ready", async () => {
       guild.id,
       new Map(invites.map(inv => [inv.code, inv.uses]))
     );
-  }
+  });
 
 /* ================= INVITE TRACKING ================= */
 client.on("guildMemberAdd", async (member) => {
@@ -306,7 +306,8 @@ const fake = inviteData?.fakeMembers?.length || 0;
           { name: "Invites ✅", value: `${valid}`, inline: true },
   { name: "Left ❌", value: `${left}`, inline: true },
   { name: "Fake 🚫", value: `${fake}`, inline: true }
-);
+)
+],
         
         components: [new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId(`approve_${orderId}`).setLabel("Approve").setStyle(ButtonStyle.Success),
