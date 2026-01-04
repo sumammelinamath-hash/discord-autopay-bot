@@ -334,6 +334,7 @@ client.on("interactionCreate", async interaction => {
         )]
       });
     }
+  }
 
     // ---------- APPROVE / REJECT ----------
     if (interaction.isButton() && (interaction.customId.startsWith("approve_") || interaction.customId.startsWith("reject_"))) {
