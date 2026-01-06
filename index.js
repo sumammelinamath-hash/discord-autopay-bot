@@ -393,33 +393,43 @@ client.on("interactionCreate", async interaction => {
     if (interaction.isModalSubmit() && interaction.customId.startsWith("vouch_modal_")) {
       await interaction.deferReply({ ephemeral: true });
       const orderId = interaction.customId.split("_")[2];
-      if (await Vouch.findOne({ orderId })) return interaction.editReply("❌ You already left a review for this order.");
 
-    const rating = Math.min(
-  Math.max(parseInt(interaction.fields.getTextInputValue("rating")), 1),
-  5);
-    const message = interaction.fields.getTextInputValue("message");
+      if (await Vouch.findOne({ orderId }))
+        return interaction.editReply("❌ You already left a review for this order.");
 
-    await Vouch.create({ orderId, userId: interaction.user.id, rating, message });
+      const rating = Math.min(
+        Math.max(parseInt(interaction.fields.getTextInputValue("rating")), 1),
+        5
+      );
+      const message = interaction.fields.getTextInputValue("message");
+
+      await Vouch.create({ orderId, userId: interaction.user.id, rating, message });
+
       const vouchChannel = await client.channels.fetch(config.vouchChannelID).catch(() => null);
-  if (vouchChannel?.isTextBased()) {
-    await vouchChannel.send({
-      embeds: [
-        createEmbed(
-          "🌟 New Review",
-          "⭐".repeat(Math.min(Math.max(rating, 1), 5)) +
-          `\n\n${message}\n👤 <@${interaction.user.id}>`
-        )
-      ]
-    });
-  }
-    return interaction.editReply("✅ Thank you! Your review has been submitted.");
+
+      if (vouchChannel?.isTextBased()) {
+        await vouchChannel.send({
+          embeds: [
+            createEmbed(
+              "🌟 New Review",
+              `⭐`.repeat(rating) + `\n\n${message}\n👤 <@${interaction.user.id}>`
+            )
+          ]
+        });
+      }
+
+      return interaction.editReply("✅ Thank you! Your review has been submitted.");
+    }
 
   } catch (err) {
-console.error("❌ Interaction Error:", err);
-if (interaction.deferred || interaction.replied) return interaction.editReply("❌ An error occurred. Check bot logs.");
-else return interaction.reply({ content: "❌ An error occurred. Check bot logs.", ephemeral: true });
-}
+    console.error("❌ Interaction Error:", err);
+
+    if (interaction.deferred || interaction.replied) {
+      return interaction.editReply("❌ An error occurred. Check bot logs.");
+    } else {
+      return interaction.reply({ content: "❌ An error occurred. Check bot logs.", ephemeral: true });
+    }
+  }
 });
 
 /* ================= LOGIN ================= */
