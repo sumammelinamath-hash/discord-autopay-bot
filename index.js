@@ -334,7 +334,6 @@ client.on("interactionCreate", async interaction => {
         )]
       });
     }
-  }
 
     // ---------- APPROVE / REJECT ----------
     if (interaction.isButton() && (interaction.customId.startsWith("approve_") || interaction.customId.startsWith("reject_"))) {
@@ -396,7 +395,9 @@ client.on("interactionCreate", async interaction => {
       const orderId = interaction.customId.split("_")[2];
       if (await Vouch.findOne({ orderId })) return interaction.editReply("❌ You already left a review for this order.");
 
-    const rating = interaction.fields.getTextInputValue("rating");
+    const rating = Math.min(
+  Math.max(parseInt(interaction.fields.getTextInputValue("rating")), 1),
+  5);
     const message = interaction.fields.getTextInputValue("message");
 
     await Vouch.create({ orderId, userId: interaction.user.id, rating, message });
@@ -411,15 +412,15 @@ client.on("interactionCreate", async interaction => {
         )
       ]
     });
+  }
     return interaction.editReply("✅ Thank you! Your review has been submitted.");
-    }
 
   } catch (err) {
 console.error("❌ Interaction Error:", err);
 if (interaction.deferred || interaction.replied) return interaction.editReply("❌ An error occurred. Check bot logs.");
 else return interaction.reply({ content: "❌ An error occurred. Check bot logs.", ephemeral: true });
 }
-});
+}
 
 /* ================= LOGIN ================= */
 if (!config.token) {
