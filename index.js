@@ -420,7 +420,7 @@ console.error("❌ Interaction Error:", err);
 if (interaction.deferred || interaction.replied) return interaction.editReply("❌ An error occurred. Check bot logs.");
 else return interaction.reply({ content: "❌ An error occurred. Check bot logs.", ephemeral: true });
 }
-}
+});
 
 /* ================= LOGIN ================= */
 if (!config.token) {
