@@ -220,24 +220,52 @@ client.on("guildMemberRemove", async member => {
 client.on("interactionCreate", async interaction => {
   try {
     // ---------- PANEL ----------
-    if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
-      const embed = glowEmbed(
-        "Invite Panel",
-        "💎 Invite users & earn rewards\n⚡ Instant tracking\n👑 Premium system",
-        GLOW.blue
+if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
+
+  await interaction.deferReply();
+
+  let colorIndex = 0; // start of glow cycle
+  const message = await interaction.editReply({
+    embeds: [glowEmbed(
+      "MineCom Premium Store",
+      "<a:zapp:1454474883449749626> Fast Auto Delivery\n<a:locked20:1454475603754487819> Secure & Trusted\n<a:sos20:1454450996653719643> 24/7 Support",
+      GLOW_CYCLE[colorIndex]
+    )],
+    components: [
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId("open_request")
+          .setLabel("Request")
+          .setEmoji({ id: "1454450202168524903" })
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setLabel("Support")
+          .setEmoji({ id: "1454450996653719643" })
+          .setStyle(ButtonStyle.Link)
+          .setURL(BRAND.supportUrl)
+      )
+    ]
+  });
+
+  // 🔄 Animate glow by editing embed color
+  const interval = setInterval(async () => {
+    try {
+      colorIndex = (colorIndex + 1) % GLOW_CYCLE.length;
+
+      const animatedEmbed = glowEmbed(
+        "MineCom Premium Store",
+        "<a:zapp:1454474883449749626> Fast Auto Delivery\n<a:locked20:1454475603754487819> Secure & Trusted\n<a:sos20:1454450996653719643> 24/7 Support",
+        GLOW_CYCLE[colorIndex]
       );
 
-      await interaction.deferReply();
-      return interaction.editReply({
-        embeds: [createEmbed(`${EMOJIS.cart} Mine Premium Store`,
-          "<a:zapp:1454474883449749626> Fast Auto Delivery\n<a:locked20:1454475603754487819> Secure & Trusted\n<a:sos20:1454450996653719643> 24/7 Support"
-        )],
-        components: [new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId("open_request").setLabel("Request").setEmoji({ id: "1454450202168524903" }).setStyle(ButtonStyle.Success),
-          new ButtonBuilder().setLabel("Support").setEmoji({ id: "1454450996653719643" }).setStyle(ButtonStyle.Link).setURL(BRAND.supportUrl)
-        )]
-      });
+      await message.edit({ embeds: [animatedEmbed] });
+
+    } catch (err) {
+      clearInterval(interval); // stop if message deleted or error
+      console.error("Glow animation error:", err);
     }
+  }, 1200); // glow speed in ms
+}
 
     // ---------- ADD STOCK ----------
     if (interaction.isChatInputCommand() && interaction.commandName === "addstock") {
