@@ -48,7 +48,7 @@ function glowEmbed(title, description, color = GLOW.purple) {
     })
     .setDescription(description)
     .setFooter({
-      text: "✨ Premium Neon Experience",
+      text: "✨ Legit Cloud • The vault of Rewards",
       iconURL: BRAND.logo
     })
     .setTimestamp();
