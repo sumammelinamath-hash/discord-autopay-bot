@@ -114,7 +114,7 @@ client.once("ready", async () => {
 
   // Status rotation
   const statuses = [
-    { name: "MineCom Store 🛒", type: ActivityType.Watching },
+    { name: "Legit Cloud Store 🛒", type: ActivityType.Watching },
     { name: "Instant Delivery ⚡", type: ActivityType.Playing },
     { name: "Secure Orders 🔐", type: ActivityType.Watching }
   ];
@@ -252,7 +252,7 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
   // Animated glow effect: change color every 1 second
   const interval = setInterval(() => {
     colorIndex = (colorIndex + 1) % GLOW_CYCLE.length;
-    const newEmbed = glowEmbed(`${EMOJIS.cart} Mine Premium Store`, description, GLOW_CYCLE[colorIndex]);
+    const newEmbed = glowEmbed(`${EMOJIS.cart} Legit Cloud • Premium Store`, description, GLOW_CYCLE[colorIndex]);
     msg.edit({ embeds: [newEmbed] }).catch(() => clearInterval(interval)); // stop if message deleted
   }, 1000);
 }
