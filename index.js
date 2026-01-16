@@ -228,16 +228,20 @@ client.on("interactionCreate", async interaction => {
   try {
     // ---------- PANEL ----------
 if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
-
   await interaction.deferReply();
 
-  let colorIndex = 0; // start of glow cycle
-  const message = await interaction.editReply({
-    embeds: [glowEmbed(
-      "MineCom Premium Store",
-      "<a:zapp:1454474883449749626> Fast Auto Delivery\n<a:locked20:1454475603754487819> Secure & Trusted\n<a:sos20:1454450996653719643> 24/7 Support",
-      GLOW_CYCLE[colorIndex]
-    )],
+  // Original description
+  const description = "<a:zapp:1454474883449749626> Fast Auto Delivery\n<a:locked20:1454475603754487819> Secure & Trusted\n<a:sos20:1454450996653719643> 24/7 Support";
+
+  // Start color index
+  let colorIndex = 0;
+
+  // Create first embed
+  const embed = glowEmbed(`${EMOJIS.cart} Mine Premium Store`, description, GLOW_CYCLE[colorIndex]);
+
+  // Send the reply
+  const msg = await interaction.editReply({
+    embeds: [embed],
     components: [
       new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -254,24 +258,12 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
     ]
   });
 
-  // 🔄 Animate glow by editing embed color
-  const interval = setInterval(async () => {
-    try {
-      colorIndex = (colorIndex + 1) % GLOW_CYCLE.length;
-
-      const animatedEmbed = glowEmbed(
-        "MineCom Premium Store",
-        "<a:zapp:1454474883449749626> Fast Auto Delivery\n<a:locked20:1454475603754487819> Secure & Trusted\n<a:sos20:1454450996653719643> 24/7 Support",
-        GLOW_CYCLE[colorIndex]
-      );
-
-      await message.edit({ embeds: [animatedEmbed] });
-
-    } catch (err) {
-      clearInterval(interval); // stop if message deleted or error
-      console.error("Glow animation error:", err);
-    }
-  }, 1200); // glow speed in ms
+  // Animated glow effect: change color every 1 second
+  const interval = setInterval(() => {
+    colorIndex = (colorIndex + 1) % GLOW_CYCLE.length;
+    const newEmbed = glowEmbed(`${EMOJIS.cart} Mine Premium Store`, description, GLOW_CYCLE[colorIndex]);
+    msg.edit({ embeds: [newEmbed] }).catch(() => clearInterval(interval)); // stop if message deleted
+  }, 1000);
 }
 
     // ---------- ADD STOCK ----------
