@@ -271,7 +271,7 @@ description += "\n\n" + stockDesc;
   });
 
   // Animated glow effect: change color every 1 second
-  const interval = setInterval(() => {
+  const interval = setInterval(async () => {
     colorIndex = (colorIndex + 1) % GLOW_CYCLE.length;
     // Fetch the latest stock counts from DB
   const stocks = await Stock.find({ used: false });
