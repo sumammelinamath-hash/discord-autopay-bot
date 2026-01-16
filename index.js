@@ -41,6 +41,7 @@ const GLOW_CYCLE = [
 function glowEmbed(title, description, color = GLOW.purple) {
   return new EmbedBuilder()
     .setColor(color) // animated glow color
+    .setTitle(title)
     .setAuthor({
       name: `✦ ${BRAND.name} ✦`,
       iconURL: BRAND.logo
@@ -227,7 +228,7 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
   let colorIndex = 0;
 
   // Create first embed
-  const embed = glowEmbed(`${EMOJIS.cart} Mine Premium Store`, description, GLOW_CYCLE[colorIndex]);
+  const embed = glowEmbed(`${EMOJIS.cart} Legit Cloud Premium Store`, description, GLOW_CYCLE[colorIndex]);
 
   // Send the reply
   const msg = await interaction.editReply({
