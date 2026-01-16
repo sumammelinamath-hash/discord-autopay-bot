@@ -40,22 +40,12 @@ const GLOW_CYCLE = [
 
 function glowEmbed(title, description, color = GLOW.purple) {
   return new EmbedBuilder()
-    .setColor(color)
+    .setColor(color) // animated glow color
     .setAuthor({
       name: `✦ ${BRAND.name} ✦`,
       iconURL: BRAND.logo
     })
-    .setDescription(
-      [
-        "```ansi",
-        "\u001b[35m█████████████████████████████\u001b[0m",
-        "```",
-        description,
-        "```ansi",
-        "\u001b[35m█████████████████████████████\u001b[0m",
-        "```"
-      ].join("\n")
-    )
+    .setDescription(description)
     .setFooter({
       text: "✨ Premium Neon Experience",
       iconURL: BRAND.logo
