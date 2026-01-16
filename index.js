@@ -20,6 +20,42 @@ const Orders = require("./models/Orders");
 const Vouch = require("./models/Vouch");
 const Invites = require("./models/Invite");
 
+// =====================
+// GLOW SYSTEM (PUT HERE ✅)
+// =====================
+const GLOW = {
+  purple: 0x9b5cff,
+  blue: 0x00eaff,
+  green: 0x00ff9c,
+  red: 0xff3b3b,
+  gold: 0xffd700
+};
+
+function glowEmbed(title, description, color = GLOW.purple) {
+  return new EmbedBuilder()
+    .setColor(color)
+    .setAuthor({
+      name: `✦ ${BRAND.name} ✦`,
+      iconURL: BRAND.logo
+    })
+    .setDescription(
+      [
+        "```ansi",
+        "\u001b[35m█████████████████████████████\u001b[0m",
+        "```",
+        description,
+        "```ansi",
+        "\u001b[35m█████████████████████████████\u001b[0m",
+        "```"
+      ].join("\n")
+    )
+    .setFooter({
+      text: "✨ Premium Neon Experience",
+      iconURL: BRAND.logo
+    })
+    .setTimestamp();
+}
+
 /* ================= CLIENT ================= */
 const client = new Client({
   intents: [
