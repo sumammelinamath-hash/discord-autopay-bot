@@ -30,6 +30,13 @@ const GLOW = {
   red: 0xff3b3b,
   gold: 0xffd700
 };
+const GLOW_CYCLE = [
+  GLOW.purple,
+  GLOW.blue,
+  GLOW.green,
+  GLOW.red,
+  GLOW.gold
+];
 
 function glowEmbed(title, description, color = GLOW.purple) {
   return new EmbedBuilder()
