@@ -224,6 +224,27 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
   // Original description
   const description = "<a:zapp:1454474883449749626> Fast Auto Delivery\n<a:locked20:1454475603754487819> Secure & Trusted\n<a:sos20:1454450996653719643> 24/7 Support";
 
+  // Fetch unused stock from MongoDB
+const stocks = await Stock.find({ used: false });
+
+let stockDesc = "📦 Stock Status:\n";
+
+if (stocks.length) {
+  // Count items per product
+  const map = {};
+  stocks.forEach(s => map[s.product] = (map[s.product] || 0) + 1);
+
+  // Convert counts to string
+  stockDesc += Object.entries(map)
+    .map(([product, count]) => `• ${product} → ${count}`)
+    .join("\n");
+} else {
+  stockDesc += "All out of stock!";
+}
+
+// Combine with your original description
+description += "\n\n" + stockDesc;
+  
   // Start color index
   let colorIndex = 0;
 
@@ -252,6 +273,21 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
   // Animated glow effect: change color every 1 second
   const interval = setInterval(() => {
     colorIndex = (colorIndex + 1) % GLOW_CYCLE.length;
+    // Fetch the latest stock counts from DB
+  const stocks = await Stock.find({ used: false });
+  let stockDesc = "📦 Stock Status:\n";
+  if (stocks.length) {
+    const map = {};
+    stocks.forEach(s => map[s.product] = (map[s.product] || 0) + 1);
+    stockDesc += Object.entries(map)
+      .map(([p, n]) => `• ${p} → ${n}`)
+      .join("\n");
+  } else stockDesc += "All out of stock!";
+
+  // Combine with original description
+  const updatedDescription =
+    "<a:zapp:1454474883449749626> Fast Auto Delivery\n<a:locked20:1454475603754487819> Secure & Trusted\n<a:sos20:1454450996653719643> 24/7 Support\n\n" +
+    stockDesc;
     const newEmbed = glowEmbed(`${EMOJIS.cart} Legit Cloud • Premium Store`, description, GLOW_CYCLE[colorIndex]);
     msg.edit({ embeds: [newEmbed] }).catch(() => clearInterval(interval)); // stop if message deleted
   }, 1000);
