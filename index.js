@@ -221,6 +221,12 @@ client.on("interactionCreate", async interaction => {
   try {
     // ---------- PANEL ----------
     if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
+      const embed = glowEmbed(
+        "Invite Panel",
+        "💎 Invite users & earn rewards\n⚡ Instant tracking\n👑 Premium system",
+        GLOW.blue
+      );
+
       await interaction.deferReply();
       return interaction.editReply({
         embeds: [createEmbed(`${EMOJIS.cart} Mine Premium Store`,
