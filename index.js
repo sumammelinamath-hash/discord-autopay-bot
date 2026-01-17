@@ -359,7 +359,7 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
       await interaction.deferUpdate();
       await interaction.followUp({
         ephemeral: true,
-        embeds: [createEmbed("🛒 Select Product", "Choose a product from the menu below 👇")],
+        embeds: [createEmbed("<:banana_cart:1462059343456501861> Select A product", "Choose a product from the menu below <:downvote:1462083173876760704>")],
         components: [new ActionRowBuilder().addComponents(
           new StringSelectMenuBuilder()
             .setCustomId("select_product")
