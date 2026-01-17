@@ -20,6 +20,10 @@ const Orders = require("./models/Orders");
 const Vouch = require("./models/Vouch");
 const Invites = require("./models/Invite");
 
+/* ================= BRAND ================= */
+const BRAND = config.brand;
+const EMOJIS = { cart: "🛒", fire: "🔥", star: "⭐", support: "🆘" };
+
 // =====================
 // GLOW SYSTEM (PUT HERE ✅)
 // =====================
@@ -70,9 +74,6 @@ const client = new Client({
 // 🔹 Invite Cache
 const inviteCache = new Map();
 
-/* ================= BRAND ================= */
-const BRAND = config.brand;
-const EMOJIS = { cart: "🛒", fire: "🔥", star: "⭐", support: "🆘" };
 
 const createEmbed = (title, description) => {
   const embed = new EmbedBuilder()
@@ -222,20 +223,25 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
   await interaction.deferReply();
 
   // Original description
-  let description = "<a:zapp:1454474883449749626> Fast Auto Delivery\n<a:locked20:1454475603754487819> Secure & Trusted\n<a:sos20:1454450996653719643> 24/7 Support" +
-    "✨ **Where quality meets trust.**",
-      "",
-      "💎 Not just a server, but a **premium ecosystem**",
-      "⚡ Instant, automated & reliable delivery",
-      "🔐 Secure systems trusted by real users",
-      "🌍 A community built for **serious members only**",
-      "",
-      "🚀 *If you’re here, you’re already ahead of the rest.*",
-      "",
-      "⚠️ **WARNING**",
-      "⚠️ Requesting a product **without sufficient invites** or **for joke / misuse**",
-      "⚠️ can lead to **serious punishment (kick / ban)**.",
-      "**Be careful and respect the system.**"
+  let description = [
+  "<a:zapp:1454474883449749626> Fast Auto Delivery",
+  "<a:locked20:1454475603754487819> Secure & Trusted",
+  "<a:sos20:1454450996653719643> 24/7 Support",
+  "",
+  "✨ **Where quality meets trust.**",
+  "",
+  "💎 Not just a server, but a **premium ecosystem**",
+  "⚡ Instant, automated & reliable delivery",
+  "🔐 Secure systems trusted by real users",
+  "🌍 A community built for **serious members only**",
+  "",
+  "🚀 *If you’re here, you’re already ahead of the rest.*",
+  "",
+  "⚠️ **WARNING**",
+  "⚠️ Requesting a product **without sufficient invites** or **for joke / misuse**",
+  "⚠️ can lead to **serious punishment (kick / ban)**.",
+  "**Be careful and respect the system.**"
+].join("\n");
 
   // Fetch unused stock from MongoDB
 const stocks = await Stock.find({ used: false });
