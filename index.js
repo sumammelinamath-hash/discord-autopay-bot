@@ -47,7 +47,7 @@ function glowEmbed(title, description, color = GLOW.purple) {
     .setColor(color) // animated glow color
     .setTitle(title)
     .setAuthor({
-      name: `✦ ${BRAND.name} ✦`,
+      name: "✦<:banana_cart:1462059343456501861> **Legit Cloud | Premium Store✦",
       iconURL: BRAND.logo
     })
     .setDescription(description)
@@ -224,45 +224,24 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
 
   // Original description
   let description = [
-  "<a:zapp:1454474883449749626> Fast Auto Delivery",
-  "<a:locked20:1454475603754487819> Secure & Trusted",
-  "<a:sos20:1454450996653719643> 24/7 Support",
+    "<a:rocket69:1462064685007245374> **Feautures**",
+  "<a:arrow_arrow:1462059738828242954> Fast Auto Delivery",
+  "<a:arrow_arrow:1462059738828242954> Secure & Trusted",
+  "<a:arrow_arrow:1462059738828242954> 24/7 Support",
   "",
-  "✨ **Where quality meets trust.**",
+  "<a:hearts_blue:1462069673502703617> **Where quality meets trust.**",
   "",
-  "💎 Not just a server, but a **premium ecosystem**",
-  "⚡ Instant, automated & reliable delivery",
-  "🔐 Secure systems trusted by real users",
-  "🌍 A community built for **serious members only**",
+  "<a:arrow_arrow:1462059738828242954> Not just a server, but a **premium ecosystem**",
+  "<a:arrow_arrow:1462059738828242954> Instant, automated & reliable delivery",
+  "<a:arrow_arrow:1462059738828242954> Secure systems trusted by real users",
+  "<a:arrow_arrow:1462059738828242954> A community built for **serious members only**",
   "",
-  "🚀 *If you’re here, you’re already ahead of the rest.*",
+  "<:warning:1462070696653094995> **WARNING**",
   "",
-  "⚠️ **WARNING**",
-  "⚠️ Requesting a product **without sufficient invites** or **for joke / misuse**",
-  "⚠️ can lead to **serious punishment (kick / ban)**.",
-  "**Be careful and respect the system.**"
+  "<a:arrow_arrow:1462059738828242954> Must have sufficient invites to request a product!",
+  "<a:arrow_arrow:1462059738828242954> Requesting a product for **Joke** is Prohibited",
+  "<a:arrow_arrow:1462059738828242954> Mis-using the bot would result into **Serious Action**"
 ].join("\n");
-
-  // Fetch unused stock from MongoDB
-const stocks = await Stock.find({ used: false });
-
-let stockDesc = "📦 Stock Status:\n";
-
-if (stocks.length) {
-  // Count items per product
-  const map = {};
-  stocks.forEach(s => map[s.product] = (map[s.product] || 0) + 1);
-
-  // Convert counts to string
-  stockDesc += Object.entries(map)
-    .map(([product, count]) => `• ${product} → ${count}`)
-    .join("\n");
-} else {
-  stockDesc += "All out of stock!";
-}
-
-// Combine with your original description
-description += "\n\n" + stockDesc;
   
   // Start color index
   let colorIndex = 0;
@@ -292,16 +271,7 @@ description += "\n\n" + stockDesc;
   // Animated glow effect: change color every 1 second
   const interval = setInterval(async () => {
     colorIndex = (colorIndex + 1) % GLOW_CYCLE.length;
-    // Fetch the latest stock counts from DB
-  const stocks = await Stock.find({ used: false });
-  let stockDesc = "📦 Stock Status:\n";
-  if (stocks.length) {
-    const map = {};
-    stocks.forEach(s => map[s.product] = (map[s.product] || 0) + 1);
-    stockDesc += Object.entries(map)
-      .map(([p, n]) => `• ${p} → ${n}`)
-      .join("\n");
-  } else stockDesc += "All out of stock!";
+  
 
   // Combine with original description
   const updatedDescription =
