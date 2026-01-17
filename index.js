@@ -222,7 +222,20 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
   await interaction.deferReply();
 
   // Original description
-  let description = "<a:zapp:1454474883449749626> Fast Auto Delivery\n<a:locked20:1454475603754487819> Secure & Trusted\n<a:sos20:1454450996653719643> 24/7 Support";
+  let description = "<a:zapp:1454474883449749626> Fast Auto Delivery\n<a:locked20:1454475603754487819> Secure & Trusted\n<a:sos20:1454450996653719643> 24/7 Support" +
+    "✨ **Where quality meets trust.**",
+      "",
+      "💎 Not just a server, but a **premium ecosystem**",
+      "⚡ Instant, automated & reliable delivery",
+      "🔐 Secure systems trusted by real users",
+      "🌍 A community built for **serious members only**",
+      "",
+      "🚀 *If you’re here, you’re already ahead of the rest.*",
+      "",
+      "⚠️ **WARNING**",
+      "⚠️ Requesting a product **without sufficient invites** or **for joke / misuse**",
+      "⚠️ can lead to **serious punishment (kick / ban)**.",
+      "**Be careful and respect the system.**"
 
   // Fetch unused stock from MongoDB
 const stocks = await Stock.find({ used: false });
