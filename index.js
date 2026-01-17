@@ -47,7 +47,7 @@ function glowEmbed(title, description, color = GLOW.purple) {
     .setColor(color) // animated glow color
     .setTitle(title)
     .setAuthor({
-      name: `✦ ${Emoji.star} Legit Cloud | Premium Store ✦`,
+      name: `✦ ${EMOJIS.star} Legit Cloud | Premium Store ✦`,
       iconURL: BRAND.logo
     })
     .setDescription(description)
