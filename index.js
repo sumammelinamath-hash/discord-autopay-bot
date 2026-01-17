@@ -22,7 +22,7 @@ const Invites = require("./models/Invite");
 
 /* ================= BRAND ================= */
 const BRAND = config.brand;
-const EMOJIS = { cart: "🛒", fire: "🔥", star: "⭐", support: "🆘" };
+const EMOJIS = { cart: "<:banana_cart:1462059343456501861>", fire: "🔥", star: "⭐", support: "🆘" };
 
 // =====================
 // GLOW SYSTEM (PUT HERE ✅)
