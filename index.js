@@ -365,7 +365,7 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
             .setCustomId("select_product")
             .setPlaceholder("Choose product")
             .addOptions(
-              { label: "Minecraft Premium", value: "Minecraft Premium", emoji: "🎮" },
+              { label: "Minecraft Premium", value: "Minecraft Premium", emoji: { id: "1454450756362174721", name: "console69", animated: true } },
               { label: "Minecraft Donut Unban", value: "Minecraft Donut Unban", emoji: "🍩" },
               { label: "Minecraft Redeem Code (Method)", value: "Minecraft Redeem Code (Method)", emoji: "🧾" },
               { label: "Minecraft Premium (Own Pass)", value: "Minecraft Premium (Own Pass)", emoji: "🔐" },
