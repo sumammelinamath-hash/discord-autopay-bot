@@ -272,10 +272,6 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
   const interval = setInterval(async () => {
     colorIndex = (colorIndex + 1) % GLOW_CYCLE.length;
   
-
-  // Combine with original description
-  const updatedDescription =
-    "<a:zapp:1454474883449749626> Fast Auto Delivery\n<a:locked20:1454475603754487819> Secure & Trusted\n<a:sos20:1454450996653719643> 24/7 Support\n\n" +
     const newEmbed = glowEmbed(`${EMOJIS.cart} Legit Cloud • Premium Store`, description, GLOW_CYCLE[colorIndex]);
     msg.edit({ embeds: [newEmbed] }).catch(() => clearInterval(interval)); // stop if message deleted
   }, 1000);
