@@ -222,7 +222,7 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
   await interaction.deferReply();
 
   // Original description
-  const description = "<a:zapp:1454474883449749626> Fast Auto Delivery\n<a:locked20:1454475603754487819> Secure & Trusted\n<a:sos20:1454450996653719643> 24/7 Support";
+  let description = "<a:zapp:1454474883449749626> Fast Auto Delivery\n<a:locked20:1454475603754487819> Secure & Trusted\n<a:sos20:1454450996653719643> 24/7 Support";
 
   // Fetch unused stock from MongoDB
 const stocks = await Stock.find({ used: false });
@@ -249,7 +249,7 @@ description += "\n\n" + stockDesc;
   let colorIndex = 0;
 
   // Create first embed
-  const embed = glowEmbed(`${EMOJIS.cart} Legit Cloud Premium Store`, description, GLOW_CYCLE[colorIndex]);
+  let embed = glowEmbed(`${EMOJIS.cart} Legit Cloud Premium Store`, description, GLOW_CYCLE[colorIndex]);
 
   // Send the reply
   const msg = await interaction.editReply({
