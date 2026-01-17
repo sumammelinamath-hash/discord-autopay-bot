@@ -365,15 +365,15 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
             .setCustomId("select_product")
             .setPlaceholder("Choose product")
             .addOptions(
-              { label: "Minecraft Premium", value: "Minecraft Premium", emoji: { id: "1454450756362174721", name: "console69", animated: true } },
-              { label: "Minecraft Donut Unban", value: "Minecraft Donut Unban", emoji: "🍩" },
-              { label: "Minecraft Redeem Code (Method)", value: "Minecraft Redeem Code (Method)", emoji: "🧾" },
-              { label: "Minecraft Premium (Own Pass)", value: "Minecraft Premium (Own Pass)", emoji: "🔐" },
-              { label: "Roblox $50 Gift Card (Method)", value: "Roblox $50 Gift Card (Method)", emoji: "🎁" },
-              { label: "Roblox $100 Gift Card (Method)", value: "Roblox $100 Gift Card (Method)", emoji: "💎" },
-              { label: "Nitro Basic (Method)", value: "Nitro Basic (Method)", emoji: "⚡" },
-              { label: "Nitro Boost (Method)", value: "Nitro Boost (Method)", emoji: "🚀" },
-              { label: "MCFA (3 Months)", value: "MCFA (3 Months)", emoji: "🛡️" }
+              { label: "MCFA", value: "MCFA", emoji: { id: "1462059738828242954", name: "arrow_arrow", animated: true } },
+              { label: "Name Changable MCFA", value: "Name Changable MCFA", emoji: { id: "1462059738828242954", name: "arrow_arrow", animated: true } },
+              { label: "MCFA with More Than Two Capes", value: "MCFA with More Than Two Capes", emoji: { id: "1462059738828242954", name: "arrow_arrow", animated: true } },
+              { label: "MCFA Hypixel Unbanned", value: "MCFA Hypixel Unbanned", emoji: { id: "1462059738828242954", name: "arrow_arrow", animated: true } },
+              { label: "Nitro GL Method", value: "Nitro GL Method", emoji: { id: "1462059738828242954", name: "arrow_arrow", animated: true } },
+              { label: "Owo Method", value: "Owo Method", emoji: { id: "1462059738828242954", name: "arrow_arrow", animated: true } },
+              { label: "Minecraft Redeem Code Method", value: "Minecraft Redeem Code Method", emoji: { id: "1462059738828242954", name: "arrow_arrow", animated: true } },
+              { label: "Any Premium Tool/Discord Bot", value: "Any Premium Tool/Discord Bot", emoji: { id: "1462059738828242954", name: "arrow_arrow", animated: true } },
+              { label: "Premium Self Bot (self cord)", value: "Premium Self Bot (self cord)", emoji: { id: "1462059738828242954", name: "arrow_arrow", animated: true } }
             )
         )]
       });
