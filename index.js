@@ -519,3 +519,16 @@ process.exit(1);
 }
 
 client.login(config.token);
+
+// =====================
+// Tiny Web Server for Render
+// =====================
+const express = require("express");
+const app = express();
+
+// Respond to GET / with a simple message
+app.get("/", (req, res) => res.send("🤖 Legit Cloud Bot is running!"));
+
+// Use the port provided by Render or default to 3000
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🌐 Web server started on port ${PORT}`));
