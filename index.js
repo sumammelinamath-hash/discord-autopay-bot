@@ -24,6 +24,19 @@ const Invites = require("./models/Invite");
 const BRAND = config.brand;
 const EMOJIS = { cart: "🛒", fire: "🔥", star: "⭐", support: "🆘" };
 
+// ================= PRODUCT COSTS =================
+const PRODUCT_COSTS = {
+  "MCFA": 1,
+  "Name Changable MCFA": 3,
+  "MCFA with More Than Two Capes": 5,
+  "MCFA Hypixel Unbanned": 6,
+  "Nitro GL Method": 2,
+  "Owo Method": 2,
+  "Minecraft Redeem Code Method": 2,
+  "Any Premium Tool/Discord Bot": 6,
+  "Premium Self Bot (self cord)": 21
+};
+
 // =====================
 // GLOW SYSTEM (PUT HERE ✅)
 // =====================
@@ -357,6 +370,23 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
     // ---------- REQUEST BUTTON ----------
     if (interaction.isButton() && interaction.customId === "open_request") {
       await interaction.deferUpdate();
+      const inviteData = await Invites.findOne({
+    userId: interaction.user.id,
+    guildId: interaction.guild.id
+  });
+  const validInvites = inviteData?.validInvites || 0;
+
+      // 3️⃣ Build affordable products embed
+  const affordableProducts = Object.entries(PRODUCT_COSTS)
+    .filter(([product, cost]) => cost <= validInvites)
+    .map(([product, cost]) => `• ${product} (Cost: ${cost} invites)`)
+    .join("\n") || "❌ You cannot afford any products yet.";
+
+  const affordEmbed = createEmbed(
+    "🛒 Your Invites & Available Products",
+    `You currently have **${validInvites} valid invites**.\n\n**Products you can afford:**\n${affordableProducts}`
+  );
+      
       await interaction.followUp({
         ephemeral: true,
         embeds: [createEmbed("<:banana_cart:1462059343456501861> Select A product", "Choose a product from the menu below <:downvote:1462083173876760704>")],
