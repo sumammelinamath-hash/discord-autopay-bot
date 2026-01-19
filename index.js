@@ -425,7 +425,6 @@ if (interaction.isChatInputCommand() && interaction.commandName === "addinvites"
     "<:invites:1462798154763210870> Your Invites & Available Products",
     `<a:star:1462799294191894695> You currently have **${validInvites} valid invites**.\n\n**Products you can afford:**\n${affordableProducts}
     \n\n<:arrow_down:1462801719892381758> **Make sure to choose the options correctly from below!**`
-);
   );
       
       await interaction.followUp({
