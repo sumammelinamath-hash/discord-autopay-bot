@@ -422,8 +422,8 @@ if (interaction.isChatInputCommand() && interaction.commandName === "addinvites"
     .join("\n") || "❌ You cannot afford any products yet.";
 
   const affordEmbed = createEmbed(
-    "🛒 Your Invites & Available Products",
-    `You currently have **${validInvites} valid invites**.\n\n**Products you can afford:**\n${affordableProducts}`
+    "<:invites:1462798154763210870> Your Invites & Available Products",
+    `<a:star:1462799294191894695> You currently have **${validInvites} valid invites**.\n\n**Products you can afford:**\n${affordableProducts}`
   );
       
       await interaction.followUp({
