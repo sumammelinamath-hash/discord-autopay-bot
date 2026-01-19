@@ -520,23 +520,36 @@ if (interaction.isChatInputCommand() && interaction.commandName === "addinvites"
       return interaction.followUp({ content: "✅ Delivered", components: [] });
     }
 
-    // ---------- VOUCH MODAL ----------
-    if (interaction.isButton() && interaction.customId.startsWith("vouch_")) {
-      const orderId = interaction.customId.split("_")[1];
-      return interaction.showModal(
-        new ModalBuilder()
-          .setCustomId(`vouch_modal_${orderId}`)
-          .setTitle("⭐ Leave a Review")
-          .addComponents([
-            new ActionRowBuilder().addComponents(
-              new TextInputBuilder().setCustomId("rating").setLabel("Rating (1-5)").setStyle(TextInputStyle.Short).setRequired(true)
-            ),
-            new ActionRowBuilder().addComponents(
-              new TextInputBuilder().setCustomId("message").setLabel("Your Review").setStyle(TextInputStyle.Paragraph).setRequired(true)
-            )
-          ])
-      );
-    }
+    // ---------- VOUCH BUTTON (DM SAFE FIX) ----------
+if (interaction.isButton() && interaction.customId.startsWith("vouch_")) {
+  try {
+    const orderId = interaction.customId.replace("vouch_", "");
+
+    return await interaction.showModal(
+      new ModalBuilder()
+        .setCustomId(`vouch_modal_${orderId}`)
+        .setTitle("⭐ Leave a Review")
+        .addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId("rating")
+              .setLabel("Rating (1-5)")
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+          ),
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId("message")
+              .setLabel("Your Review")
+              .setStyle(TextInputStyle.Paragraph)
+              .setRequired(true)
+          )
+        )
+    );
+  } catch (err) {
+    console.error("Vouch modal error:", err);
+  }
+         }
 
     // ---------- VOUCH SUBMIT ----------
     if (interaction.isModalSubmit() && interaction.customId.startsWith("vouch_modal_")) {
