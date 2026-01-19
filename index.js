@@ -507,7 +507,8 @@ await inviteData.save();
         components: [new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId(`approve_${orderId}`).setLabel("Approve").setStyle(ButtonStyle.Success),
           new ButtonBuilder().setCustomId(`reject_${orderId}`).setLabel("Reject").setStyle(ButtonStyle.Danger)
-        )]
+        )
+      ]
       });
         } catch (err) {
     console.error("SELECT PRODUCT ERROR:", err);
@@ -517,7 +518,6 @@ await inviteData.save();
     });
   }
 }
-    }
 
     // ---------- APPROVE / REJECT ----------
     if (interaction.isButton() && (interaction.customId.startsWith("approve_") || interaction.customId.startsWith("reject_"))) {
