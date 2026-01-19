@@ -147,6 +147,19 @@ client.once("ready", async () => {
       .addStringOption(o => o.setName("product").setDescription("Product name").setRequired(true))
       .addStringOption(o => o.setName("data").setDescription("Code / Account").setRequired(true)),
     new SlashCommandBuilder()
+  .setName("addinvites")
+  .setDescription("Add invites to a member (Admin only)")
+  .addUserOption(option =>
+    option.setName("user")
+      .setDescription("Ping the member to add invites")
+      .setRequired(true)
+  )
+  .addIntegerOption(option =>
+    option.setName("amount")
+      .setDescription("Number of invites to add")
+      .setRequired(true)
+  ),
+    new SlashCommandBuilder()
       .setName("importstock")
       .setDescription("Import stock via TXT (Admin)")
       .addStringOption(o => o.setName("product").setDescription("Product name").setRequired(true))
@@ -299,6 +312,32 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
       await Stock.create({ product, data, used: false });
       return interaction.editReply("✅ Stock added");
     }
+
+    // ---------- ADD INVITES ----------
+if (interaction.isChatInputCommand() && interaction.commandName === "addinvites") {
+  await interaction.deferReply({ ephemeral: true });
+
+  // Check admin permission
+  if (!interaction.member.roles.cache.has(config.adminRoleID)) {
+    return interaction.editReply("❌ You do not have permission to use this command.");
+  }
+
+  // Get the pinged user and amount
+  const target = interaction.options.getUser("user");
+  const amount = interaction.options.getInteger("amount");
+
+  if (!target) return interaction.editReply("❌ User not found.");
+  if (amount <= 0) return interaction.editReply("❌ Amount must be greater than 0.");
+
+  // Update the invites in the database
+  const result = await Invites.findOneAndUpdate(
+    { userId: target.id, guildId: interaction.guild.id },
+    { $inc: { validInvites: amount } },
+    { upsert: true, new: true }
+  );
+
+  return interaction.editReply(`✅ Added **${amount} invites** to <@${target.id}>. They now have **${result.validInvites} valid invites**.`);
+}
 
     // ---------- IMPORT STOCK ----------
     if (interaction.isChatInputCommand() && interaction.commandName === "importstock") {
