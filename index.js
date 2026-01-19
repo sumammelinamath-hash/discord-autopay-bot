@@ -450,17 +450,29 @@ if (interaction.isChatInputCommand() && interaction.commandName === "addinvites"
 
     // ---------- SELECT PRODUCT ----------
     if (interaction.isStringSelectMenu() && interaction.customId === "select_product") {
+      try {
       await interaction.deferUpdate();
       const product = interaction.values[0];
       if (!product) return;
 
       const orderId = `ORD-${Date.now()}`;
 
-      // Invite stats for user
-      const inviteData = await Invites.findOne({
-        userId: interaction.user.id,
-        guildId: interaction.guild.id
-      });
+      let inviteData = await Invites.findOne({
+  userId: interaction.user.id,
+  guildId: interaction.guild.id
+});
+
+// ✅ CREATE DATA IF NOT EXISTS (VERY IMPORTANT)
+if (!inviteData) {
+  inviteData = await Invites.create({
+    userId: interaction.user.id,
+    guildId: interaction.guild.id,
+    validInvites: 0,
+    leftMembers: [],
+    fakeMembers: [],
+    invitedMembers: []
+  });
+}
       const valid = inviteData?.validInvites || 0;
       const cost = PRODUCT_COSTS[product] || 0;
 
@@ -475,6 +487,7 @@ if (valid < cost) {
 // ✅ Deduct invites
 inviteData.validInvites -= cost;
 await inviteData.save();
+      const remainingInvites = inviteData.validInvites;
       const left = inviteData?.leftMembers?.length || 0;
       const fake = inviteData?.fakeMembers?.length || 0;
 
@@ -487,7 +500,7 @@ await inviteData.save();
           { name: "Product", value: product, inline: true },
           { name: "Cost", value: `${cost} invites`, inline: true },
           { name: "Order ID", value: orderId, inline: true },
-          { name: "Invites ✅", value: `${valid}`, inline: true },
+          { name: "Invites ✅", value: `${remainingInvites}`, inline: true },
           { name: "Left ❌", value: `${left}`, inline: true },
           { name: "Fake 🚫", value: `${fake}`, inline: true }
         )],
@@ -496,6 +509,14 @@ await inviteData.save();
           new ButtonBuilder().setCustomId(`reject_${orderId}`).setLabel("Reject").setStyle(ButtonStyle.Danger)
         )]
       });
+        } catch (err) {
+    console.error("SELECT PRODUCT ERROR:", err);
+    await interaction.followUp({
+      ephemeral: true,
+      content: "❌ Something went wrong while processing your request."
+    });
+  }
+}
     }
 
     // ---------- APPROVE / REJECT ----------
