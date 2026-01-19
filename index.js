@@ -418,7 +418,7 @@ if (interaction.isChatInputCommand() && interaction.commandName === "addinvites"
       // 3️⃣ Build affordable products embed
   const affordableProducts = Object.entries(PRODUCT_COSTS)
     .filter(([product, cost]) => cost <= validInvites)
-    .map(([product, cost]) => `• ${product} (Cost: ${cost} invites)`)
+    .map(([product, cost]) => `<a:arrow_arrow:1461013109111263406> ${product} (Cost: ${cost} invites)`)
     .join("\n") || "❌ You cannot afford any products yet.";
 
   const affordEmbed = createEmbed(
