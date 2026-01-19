@@ -462,6 +462,19 @@ if (interaction.isChatInputCommand() && interaction.commandName === "addinvites"
         guildId: interaction.guild.id
       });
       const valid = inviteData?.validInvites || 0;
+      const cost = PRODUCT_COSTS[product] || 0;
+
+// ❌ Not enough invites
+if (valid < cost) {
+  return interaction.followUp({
+    ephemeral: true,
+    content: `❌ You need **${cost} invites** for **${product}**.\nYou only have **${valid} valid invites**.`
+  });
+}
+
+// ✅ Deduct invites
+inviteData.validInvites -= cost;
+await inviteData.save();
       const left = inviteData?.leftMembers?.length || 0;
       const fake = inviteData?.fakeMembers?.length || 0;
 
@@ -472,6 +485,7 @@ if (interaction.isChatInputCommand() && interaction.commandName === "addinvites"
         embeds: [createEmbed("🛒 New Order").addFields(
           { name: "User", value: `<@${interaction.user.id}>`, inline: true },
           { name: "Product", value: product, inline: true },
+          { name: "Cost", value: `${cost} invites`, inline: true },
           { name: "Order ID", value: orderId, inline: true },
           { name: "Invites ✅", value: `${valid}`, inline: true },
           { name: "Left ❌", value: `${left}`, inline: true },
