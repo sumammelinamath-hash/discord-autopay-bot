@@ -23,7 +23,7 @@ const Invites = require("./models/Invite");
 /* ================= BRAND ================= */
 const BRAND = config.brand;
 const EMOJIS = { cart: "🛒", fire: "🔥", star: "⭐", support: "🆘" };
-const PREFIX = config.prefix;
+const PREFIXES = ["+"];
 
 // ================= PRODUCT COSTS =================
 const PRODUCT_COSTS = {
@@ -322,7 +322,11 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
     if (message.author.bot || !message.guild) return;
 
     const content = message.content.toLowerCase().trim();
-    if (!PREFIXES.includes(content)) return;
+    const prefix = PREFIXES.find(p => content.startsWith(p));
+if (!prefix) return;
+
+    const args = content.slice(prefix.length).trim().split(/ +/);
+const command = args.shift();
 
     // Fetch invite data
     let inviteData = await Invites.findOne({
