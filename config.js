@@ -1,5 +1,5 @@
 module.exports = {
-  prefix: "!",
+  prefix: "+",
   token: process.env.TOKEN,
   mongoURI: process.env.MONGO_URI,
   adminRoleID: process.env.ADMIN_ROLE_ID,
