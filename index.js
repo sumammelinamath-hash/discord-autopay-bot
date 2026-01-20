@@ -182,27 +182,41 @@ client.once("ready", async () => {
   ]);
 });
 
-
-   // ----------- MY INVITES -----------
-    client.on("messageCreate", async message => {
+client.on("messageCreate", async message => {
   try {
     // Ignore bots & DMs
     if (message.author.bot || !message.guild) return;
 
-    const content = message.content.toLowerCase().trim();
+    const content = message.content.trim();
     const prefix = PREFIXES.find(p => content.startsWith(p));
-if (!prefix) return;
+    if (!prefix) return;
 
+    // Slice off prefix and split into args
     const args = content.slice(prefix.length).trim().split(/ +/);
-const command = args.shift();
+    const command = args.shift()?.toLowerCase();
+    if (command !== "invites" && command !== "i") return;
+
+    let target = message.author; // default = self
+
+    // Check if first argument is a mention
+    if (args[0]) {
+      const mention = message.mentions.users.first();
+      if (mention) {
+        // Only allow admins to check others
+        if (!message.member.roles.cache.has(config.adminRoleID)) {
+          return message.reply("❌ You cannot check other users' invites!");
+        }
+        target = mention;
+      }
+    }
 
     // Fetch invite data
     let inviteData = await Invites.findOne({
-      userId: message.author.id,
+      userId: target.id,
       guildId: message.guild.id
     });
 
-    // If no data exists yet
+    // Default if no data exists
     if (!inviteData) {
       inviteData = {
         validInvites: 0,
@@ -215,14 +229,12 @@ const command = args.shift();
     const valid = inviteData.validInvites || 0;
     const left = inviteData.leftMembers?.length || 0;
     const fake = inviteData.fakeMembers?.length || 0;
-
-    // Rejoined = total invited - left - fake
     const totalInvited = inviteData.invitedMembers?.length || 0;
     const rejoined = Math.max(totalInvited - left - fake, 0);
 
     // Build embed
     const inviteEmbed = createEmbed(
-      "📨 Your Invite Statistics",
+      `📨 Invite Stats • ${target.tag}`,
       [
         `✅ **Valid Invites:** ${valid}`,
         `❌ **Left Invites:** ${left}`,
@@ -237,7 +249,7 @@ const command = args.shift();
 
   } catch (err) {
     console.error("INVITES PREFIX ERROR:", err);
-    message.reply("❌ Failed to fetch your invite data.");
+    message.reply("❌ Failed to fetch invite data.");
   }
 });
 
