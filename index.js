@@ -182,6 +182,65 @@ client.once("ready", async () => {
   ]);
 });
 
+
+   // ----------- MY INVITES -----------
+    client.on("messageCreate", async message => {
+  try {
+    // Ignore bots & DMs
+    if (message.author.bot || !message.guild) return;
+
+    const content = message.content.toLowerCase().trim();
+    const prefix = PREFIXES.find(p => content.startsWith(p));
+if (!prefix) return;
+
+    const args = content.slice(prefix.length).trim().split(/ +/);
+const command = args.shift();
+
+    // Fetch invite data
+    let inviteData = await Invites.findOne({
+      userId: message.author.id,
+      guildId: message.guild.id
+    });
+
+    // If no data exists yet
+    if (!inviteData) {
+      inviteData = {
+        validInvites: 0,
+        leftMembers: [],
+        fakeMembers: [],
+        invitedMembers: []
+      };
+    }
+
+    const valid = inviteData.validInvites || 0;
+    const left = inviteData.leftMembers?.length || 0;
+    const fake = inviteData.fakeMembers?.length || 0;
+
+    // Rejoined = total invited - left - fake
+    const totalInvited = inviteData.invitedMembers?.length || 0;
+    const rejoined = Math.max(totalInvited - left - fake, 0);
+
+    // Build embed
+    const inviteEmbed = createEmbed(
+      "📨 Your Invite Statistics",
+      [
+        `✅ **Valid Invites:** ${valid}`,
+        `❌ **Left Invites:** ${left}`,
+        `🚫 **Fake Invites:** ${fake}`,
+        `🔁 **Rejoined Invites:** ${rejoined}`,
+        "",
+        "✨ Keep inviting to unlock premium rewards!"
+      ].join("\n")
+    );
+
+    await message.reply({ embeds: [inviteEmbed] });
+
+  } catch (err) {
+    console.error("INVITES PREFIX ERROR:", err);
+    message.reply("❌ Failed to fetch your invite data.");
+  }
+});
+
 /* ================= INVITE TRACKING ================= */
 client.on("guildMemberAdd", async member => {
   try {
@@ -313,65 +372,6 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
       await Stock.create({ product, data, used: false });
       return interaction.editReply("✅ Stock added");
     }
-
-
-   // ----------- MY INVITES -----------
-    client.on("messageCreate", async message => {
-  try {
-    // Ignore bots & DMs
-    if (message.author.bot || !message.guild) return;
-
-    const content = message.content.toLowerCase().trim();
-    const prefix = PREFIXES.find(p => content.startsWith(p));
-if (!prefix) return;
-
-    const args = content.slice(prefix.length).trim().split(/ +/);
-const command = args.shift();
-
-    // Fetch invite data
-    let inviteData = await Invites.findOne({
-      userId: message.author.id,
-      guildId: message.guild.id
-    });
-
-    // If no data exists yet
-    if (!inviteData) {
-      inviteData = {
-        validInvites: 0,
-        leftMembers: [],
-        fakeMembers: [],
-        invitedMembers: []
-      };
-    }
-
-    const valid = inviteData.validInvites || 0;
-    const left = inviteData.leftMembers?.length || 0;
-    const fake = inviteData.fakeMembers?.length || 0;
-
-    // Rejoined = total invited - left - fake
-    const totalInvited = inviteData.invitedMembers?.length || 0;
-    const rejoined = Math.max(totalInvited - left - fake, 0);
-
-    // Build embed
-    const inviteEmbed = createEmbed(
-      "📨 Your Invite Statistics",
-      [
-        `✅ **Valid Invites:** ${valid}`,
-        `❌ **Left Invites:** ${left}`,
-        `🚫 **Fake Invites:** ${fake}`,
-        `🔁 **Rejoined Invites:** ${rejoined}`,
-        "",
-        "✨ Keep inviting to unlock premium rewards!"
-      ].join("\n")
-    );
-
-    await message.reply({ embeds: [inviteEmbed] });
-
-  } catch (err) {
-    console.error("INVITES PREFIX ERROR:", err);
-    message.reply("❌ Failed to fetch your invite data.");
-  }
-});
     
 
     // ---------- ADD INVITES ----------
