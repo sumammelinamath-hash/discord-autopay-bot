@@ -23,6 +23,7 @@ const Invites = require("./models/Invite");
 /* ================= BRAND ================= */
 const BRAND = config.brand;
 const EMOJIS = { cart: "🛒", fire: "🔥", star: "⭐", support: "🆘" };
+const PREFIXES = ["!invites", "!i"];
 
 // ================= PRODUCT COSTS =================
 const PRODUCT_COSTS = {
@@ -312,6 +313,62 @@ if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
       await Stock.create({ product, data, used: false });
       return interaction.editReply("✅ Stock added");
     }
+
+
+   // ----------- MY INVITES -----------
+    client.on("messageCreate", async message => {
+  try {
+    // Ignore bots & DMs
+    if (message.author.bot || !message.guild) return;
+
+    const content = message.content.toLowerCase().trim();
+    if (!PREFIXES.includes(content)) return;
+
+    // Fetch invite data
+    let inviteData = await Invites.findOne({
+      userId: message.author.id,
+      guildId: message.guild.id
+    });
+
+    // If no data exists yet
+    if (!inviteData) {
+      inviteData = {
+        validInvites: 0,
+        leftMembers: [],
+        fakeMembers: [],
+        invitedMembers: []
+      };
+    }
+
+    const valid = inviteData.validInvites || 0;
+    const left = inviteData.leftMembers?.length || 0;
+    const fake = inviteData.fakeMembers?.length || 0;
+
+    // Rejoined = total invited - left - fake
+    const totalInvited = inviteData.invitedMembers?.length || 0;
+    const rejoined = Math.max(totalInvited - left - fake, 0);
+
+    // Build embed
+    const inviteEmbed = createEmbed(
+      "📨 Your Invite Statistics",
+      [
+        `✅ **Valid Invites:** ${valid}`,
+        `❌ **Left Invites:** ${left}`,
+        `🚫 **Fake Invites:** ${fake}`,
+        `🔁 **Rejoined Invites:** ${rejoined}`,
+        "",
+        "✨ Keep inviting to unlock premium rewards!"
+      ].join("\n")
+    );
+
+    await message.reply({ embeds: [inviteEmbed] });
+
+  } catch (err) {
+    console.error("INVITES PREFIX ERROR:", err);
+    message.reply("❌ Failed to fetch your invite data.");
+  }
+});
+    
 
     // ---------- ADD INVITES ----------
 if (interaction.isChatInputCommand() && interaction.commandName === "addinvites") {
