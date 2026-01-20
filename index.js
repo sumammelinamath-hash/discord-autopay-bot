@@ -23,7 +23,7 @@ const Invites = require("./models/Invite");
 /* ================= BRAND ================= */
 const BRAND = config.brand;
 const EMOJIS = { cart: "🛒", fire: "🔥", star: "⭐", support: "🆘" };
-const PREFIXES = ["!invites", "!i"];
+const PREFIX = config.prefix;
 
 // ================= PRODUCT COSTS =================
 const PRODUCT_COSTS = {
