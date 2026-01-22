@@ -38,6 +38,13 @@ const PRODUCT_COSTS = {
   "Premium Self Bot (self cord)": 21
 };
 
+// ================= PRODUCT RULES (PUT HERE ✅) =================
+const PRODUCT_RULES = {
+  "MCFA Hypixel Unbanned": ["premium_unbanned"],
+  "MCFA": ["premium_unbanned", "premium_banned"],
+  "Name Changable MCFA": ["premium_unbanned", "premium_banned"]
+};
+
 // =====================
 // GLOW SYSTEM (PUT HERE ✅)
 // =====================
@@ -180,6 +187,43 @@ client.once("ready", async () => {
           .addUserOption(option => option.setName("target").setDescription("Select a member").setRequired(true))
       )
   ]);
+});
+
+const runChecker = require("./checker/runChecker");
+
+client.on("messageCreate", async message => {
+  try {
+    if (!message.guild) return;
+    if (message.author.bot) return;
+    if (message.channel.id !== config.uploadChannelID) return;
+    if (!message.attachments.size) return;
+
+    const file = message.attachments.first();
+    if (!file.name.endsWith(".txt")) return;
+
+    await message.reply("🔍 Auto-checking accounts...");
+
+    const res = await fetch(file.url);
+    const text = await res.text();
+
+    const lines = text
+      .split("\n")
+      .map(l => l.trim())
+      .filter(Boolean);
+
+    for (const line of lines) {
+      const [email, password] = line.split(":");
+      if (!email || !password) continue;
+
+      await runChecker(email, password, file.name);
+    }
+
+    await message.reply(`✅ Checked ${lines.length} accounts`);
+
+  } catch (err) {
+    console.error("AUTO CHECK ERROR:", err);
+    message.reply("❌ Error while checking file");
+  }
 });
 
 client.on("messageCreate", async message => {
