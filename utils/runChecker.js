@@ -22,7 +22,8 @@ async function runChecker(email, password, sourceFile) {
       premium,
       hypixelBanned,
       category,
-      sourceFile
+      sourceFile,
+      status: "available"
     });
 
   } catch (err) {
