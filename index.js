@@ -18,6 +18,7 @@ const config = require("./config");
 const Stock = require("./models/Stock");
 const Orders = require("./models/Orders");
 const Vouch = require("./models/Vouch");
+const CheckedAccount = require("./models/CheckedAccount");
 const Invites = require("./models/Invite");
 
 /* ================= BRAND ================= */
@@ -651,26 +652,60 @@ await inviteData.save();
         return interaction.followUp({ content: "❌ Order rejected", components: [] });
       }
 
-      const stock = await Stock.findOne({ product: order.product, used: false });
-      if (!stock) return interaction.followUp({ content: "❌ No stock", components: [] });
+     const allowedCategories = PRODUCT_RULES[order.product];
+if (!allowedCategories) {
+  return interaction.followUp({
+    content: "❌ No delivery rules configured for this product.",
+    components: []
+  });
+}
 
-      stock.used = true;
-      order.status = "completed";
-      await stock.save();
-      await order.save();
+const account = await CheckedAccount.findOne({
+  category: { $in: allowedCategories },
+  status: "available"
+});
 
-      const user = await client.users.fetch(order.userId).catch(() => null);
-      if (user) {
-        await user.send({
-          embeds: [createEmbed("🎉 DELIVERY SUCCESSFUL", `📦 ${order.product}\n\n||\`\`\`\n${stock.data}\n\`\`\`||`)],
-          components: [new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId(`vouch_${orderId}`).setLabel("⭐ Leave a Review").setStyle(ButtonStyle.Primary)
-          )]
-        }).catch(() => {});
-      }
+if (!account) {
+  return interaction.followUp({
+    content: "❌ No checked accounts available for this product.",
+    components: []
+  });
+}
 
-      return interaction.followUp({ content: "✅ Delivered", components: [] });
-    }
+const user = await client.users.fetch(order.userId).catch(() => null);
+if (!user) {
+  return interaction.followUp({
+    content: "❌ Cannot DM the user.",
+    components: []
+  });
+}
+
+await user.send({
+  embeds: [
+    createEmbed(
+      "🎉 DELIVERY SUCCESSFUL",
+      `📦 ${order.product}\n\n||\`\`\`\n${account.email}:${account.password}\n\`\`\`||`
+    )
+  ],
+  components: [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`vouch_${orderId}`)
+        .setLabel("⭐ Leave a Review")
+        .setStyle(ButtonStyle.Primary)
+    )
+  ]
+});
+
+account.status = "delivered";
+account.deliveredTo = user.id;
+account.deliveredAt = new Date();
+await account.save();
+
+order.status = "completed";
+await order.save();
+
+return interaction.followUp({ content: "✅ Delivered", components: [] }); 
 
     // ---------- VOUCH BUTTON (DM SAFE FIX) ----------
 if (interaction.isButton() && interaction.customId.startsWith("vouch_")) {
