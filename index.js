@@ -706,6 +706,7 @@ order.status = "completed";
 await order.save();
 
 return interaction.followUp({ content: "✅ Delivered", components: [] }); 
+    }
 
     // ---------- VOUCH BUTTON (DM SAFE FIX) ----------
 if (interaction.isButton() && interaction.customId.startsWith("vouch_")) {
